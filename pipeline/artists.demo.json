@@ -1,0 +1,19 @@
+{
+  "market": "TZ",
+  "artist": {
+    "id": "diamond-platnumz",
+    "name": "Diamond Platnumz",
+    "role": "self",
+    "spotifyArtistId": "3cAisWS37sGCCtRgWfvrod",
+    "youtubeChannelId": "UCev-b-xy-p5fHK8x3zJyn1Q"
+  },
+  "competitors": [
+    {
+      "id": "zuchu",
+      "name": "Zuchu",
+      "role": "competitor",
+      "spotifyArtistId": "6LzSS8yBk2YQpAvQxzOu0M",
+      "youtubeChannelId": "UCOn8zDM533kqzhIA8c3NFbQ"
+    }
+  ]
+}

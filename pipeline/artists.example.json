@@ -1,0 +1,19 @@
+{
+  "market": "US",
+  "artist": {
+    "id": "mira-vale",
+    "name": "Mira Vale",
+    "role": "self",
+    "spotifyArtistId": "PASTE_SPOTIFY_ARTIST_ID",
+    "youtubeChannelId": "PASTE_YOUTUBE_CHANNEL_ID"
+  },
+  "competitors": [
+    {
+      "id": "competitor-one",
+      "name": "Competitor One",
+      "role": "competitor",
+      "spotifyArtistId": "PASTE_SPOTIFY_ARTIST_ID",
+      "youtubeChannelId": "PASTE_YOUTUBE_CHANNEL_ID"
+    }
+  ]
+}
