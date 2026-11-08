@@ -9,6 +9,7 @@ import { OAuth2Client } from "google-auth-library";
 
 import { buildReportPdf, reportFileName } from "../serverless/report/pdf.mjs";
 import { resolveReportData } from "../serverless/report/data.mjs";
+import { resolveBenchmark } from "../serverless/benchmark/sources.mjs";
 
 const ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const PORT = Number(process.env.PORT || 8130);
@@ -249,6 +250,28 @@ app.get("/api/report", async (req, res, next) => {
       "X-Report-Mode": data.source || data.mode,
     });
     res.status(200).end(pdf);
+  } catch (error) {
+    next(error);
+  }
+});
+
+async function readDigestStore() {
+  try {
+    return JSON.parse(await fs.readFile(path.join(ROOT, "data", "audiomack-digest.json"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+app.get("/api/benchmark", async (req, res, next) => {
+  /* Public-source lookup for comparison: Spotify + YouTube, key-gated. */
+  res.set("Cache-Control", "no-store");
+  const artist = String(req.query.artist || req.query.q || "").trim();
+  if (!artist) return res.status(400).json({ error: "Pass ?artist=<name> to look up an artist." });
+  if (artist.length > 120) return res.status(400).json({ error: "Artist name is too long." });
+  try {
+    const digest = await readDigestStore();
+    return res.json(await resolveBenchmark({ artist, digest }));
   } catch (error) {
     next(error);
   }
