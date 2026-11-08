@@ -29,6 +29,7 @@
 import { spawn } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { mkdir, stat } from "node:fs/promises";
 
 const VERSION = "0.1.0";
@@ -378,7 +379,7 @@ async function main() {
   console.log(`Stopped after ${done} job(s).`);
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, "/")}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
     process.exitCode = 1;
