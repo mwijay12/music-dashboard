@@ -2802,8 +2802,15 @@ function exportCsv() {
  */
 function openPdfReport(source = "demo") {
   const url = `/api/report?source=${encodeURIComponent(source)}&inline=1&t=${Date.now()}`;
-  const win = window.open(url, "_blank", "noopener");
+  /* No "noopener" feature string: with it the call returns null by spec, which
+     would look like a blocked popup even when the tab opened fine. */
+  const win = window.open(url, "_blank");
   if (win) {
+    try {
+      win.opener = null;
+    } catch {
+      /* cross-origin window: nothing to do */
+    }
     showToast(source === "digest" ? "Digest PDF opened in a new tab" : "PDF report opened in a new tab");
     return;
   }
