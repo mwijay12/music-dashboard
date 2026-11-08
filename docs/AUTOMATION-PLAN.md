@@ -70,7 +70,7 @@ Top songs                      lifetime: 300 + 160 + 110 + 90 + 90 = 750 plays
 
 750 > 103 because they are **different clocks**: 103 is the 7-day window, the song counts are lifetime. A naive pipeline would subtract them and report negative growth. The parser stores both and flags the mismatch (`diagnostics.scopeMismatch`), and the PDF prints the warning in plain language.
 
-**Pipeline (built):**
+**Pipeline (built, including the mailbox step):**
 
 ```
 Audiomack email
@@ -82,9 +82,16 @@ Audiomack email
 ```
 
 ```bash
-npm run digest -- --file pipeline/fixtures/audiomack-digest-2026-11-07.txt
-# or: cat email.txt | npm run digest
-npm test            # 6 parser tests incl. the real digest
+npm run digest -- --file pipeline/fixtures/audiomack-digest-2026-11-07.txt   # one file
+npm run inbox -- --dry-run --file pipeline/fixtures/audiomack-digest-2026-11-07.txt
+npm run inbox                                                                # IMAP, cron-friendly
+npm test            # 11 tests: parser, store merge, HTML/plain-text extraction
+```
+
+`npm run inbox` logs into the mailbox (IMAP + app password), searches for unread mail from Audiomack, extracts the plain-text part (HTML fallback), parses it with the same parser and appends the week. Re-running a week replaces its entry instead of duplicating it, so cron can run every 15 minutes without fear.
+
+```
+Audiomack email → mailbox rule → IMAP (npm run inbox) → parser → data/audiomack-digest.json → /api/report?source=digest
 ```
 
 **Getting the email in automatically — three options, cheapest first:**
@@ -177,7 +184,7 @@ Code is done (`api/auth/google.js`, `login.html`, `api/config`). To switch it on
 | Phase | Scope | Effort | Depends on |
 | --- | --- | --- | --- |
 | **0 — done** | Vector PDF reports, Audiomack digest parser + tests, digest PDF variant, `/sources` entry point | shipped | — |
-| **1 — wire the accounts** | Google OAuth live; Audiomack digest auto-forward (IMAP poller + cron); weekly cron renders digest PDF | 1–2 days | client secret, mailbox app password |
+| **1 — wire the accounts** | Google OAuth live; cron the IMAP poller (`npm run inbox`, **built**); weekly cron renders the digest PDF | ~1 day | client secret, mailbox app password |
 | **2 — history + API** | Postgres schema (§6), worker polls Audiomack Data API daily, `/api/report` reads DB, trend charts replace bar panels | 3–5 days | Audiomack app approval |
 | **3 — second platform** | Spotify for Artists CSV upload (parse + map) or YouTube Analytics OAuth; PDF gains a platform comparison page | 3–4 days | S4A export / Google scopes |
 | **4 — delivery** | Scheduled email with PDF attached, signed links, per-platform variants, alert when a track passes a milestone | 2 days | phase 2 |

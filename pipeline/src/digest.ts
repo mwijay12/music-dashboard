@@ -1,35 +1,18 @@
 import "dotenv/config";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parseAudiomackDigest, type AudiomackDigest } from "./parsers/audiomack-digest.js";
+import { DEFAULT_STORE_PATH, mergeDigest, readStore, writeStore } from "./digest-store.js";
+import { parseAudiomackDigest } from "./parsers/audiomack-digest.js";
 
 /**
- * Turns an Audiomack weekly email into `data/audiomack-digest.json`.
+ * Turns an Audiomack weekly email file (or stdin) into the digest store.
  *
  *   npm run digest -- --file inbox/audiomack-2026-11-07.txt
  *   cat email.txt | npm run digest
  *
- * The file keeps the latest digest plus a per-week history, so once you run it
- * every week you get a real time series — something Audiomack itself does not
- * expose through its API.
+ * For automatic pickup from the mailbox, use `npm run inbox`.
  */
-
-const OUT = path.resolve("data/audiomack-digest.json");
-
-interface DigestStore {
-  schemaVersion: 1;
-  account: string;
-  updatedAt: string;
-  latest: AudiomackDigest;
-  history: Array<{
-    periodEnd: string | null;
-    capturedAt: string;
-    totals: AudiomackDigest["totals"];
-    topTrackSum: number;
-    tracks: AudiomackDigest["tracks"];
-  }>;
-}
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -51,37 +34,12 @@ async function main() {
   }
 
   const digest = parseAudiomackDigest(raw);
-  const now = new Date().toISOString();
+  const store = await readStore(process.env.DIGEST_STORE || DEFAULT_STORE_PATH);
+  const next = mergeDigest(store, digest);
+  await writeStore(next, process.env.DIGEST_STORE || DEFAULT_STORE_PATH);
+  const history = next.history;
 
-  let store: DigestStore | null = null;
-  try {
-    store = JSON.parse(await readFile(OUT, "utf8")) as DigestStore;
-  } catch {
-    store = null;
-  }
-
-  const history = (store?.history ?? []).filter((entry) => entry.periodEnd !== digest.periodEnd);
-  history.push({
-    periodEnd: digest.periodEnd,
-    capturedAt: now,
-    totals: digest.totals,
-    topTrackSum: digest.diagnostics.topTrackSum,
-    tracks: digest.tracks,
-  });
-  history.sort((a, b) => String(a.periodEnd).localeCompare(String(b.periodEnd)));
-
-  const next: DigestStore = {
-    schemaVersion: 1,
-    account: digest.account,
-    updatedAt: now,
-    latest: digest,
-    history,
-  };
-
-  await mkdir(path.dirname(OUT), { recursive: true });
-  await writeFile(OUT, `${JSON.stringify(next, null, 2)}\n`);
-
-  console.log(`Audiomack digest → ${path.relative(process.cwd(), OUT)}`);
+  console.log(`Audiomack digest → ${path.relative(process.cwd(), process.env.DIGEST_STORE || DEFAULT_STORE_PATH)}`);
   console.log(`  account     ${digest.account}`);
   console.log(`  period end  ${digest.periodEnd ?? "unknown"}`);
   console.log(

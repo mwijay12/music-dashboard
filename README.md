@@ -175,8 +175,11 @@ Audiomack's weekly email is the only route to this account's real plays — ther
 
 ```bash
 npm run digest -- --file pipeline/fixtures/audiomack-digest-2026-11-07.txt
-npm test                           # 6 parser tests
+npm run inbox                      # pulls unread digests over IMAP (cron on the EC2 box)
+npm test                           # 11 tests: parser, store merge, body extraction
 ```
+
+`npm run inbox` is the hands-off path: point it at a mailbox, add a filter that files Audiomack mail into one folder (or forward it to a dedicated address), and run it from cron. It needs `IMAP_HOST`, `IMAP_USER` and `IMAP_PASSWORD` (an app password — not your account password); `--dry-run --file <path>` exercises it without touching a mailbox. Nothing leaves the box, and no Google OAuth scope or CASA review is involved.
 
 Two things worth knowing, both enforced in code:
 
@@ -228,7 +231,7 @@ The UI is already structured for real data: every view renders from module-level
 
 - `scenes.js` still contains an unused three.js globe builder (`createGlobe`); only the orbs are mounted. The visible globe is the cobe island.
 - three.js accounts for ~125 KB gzip of `bundle.js`, which is the single largest frontend cost.
-- `app.js` and `scenes.js` are plain JS and outside the TypeScript project and have no lint; only the Audiomack digest parser has tests (`npm test`, 6 cases).
+- `app.js` and `scenes.js` are plain JS and outside the TypeScript project and have no lint; tests cover the digest pipeline only (`npm test`, 11 cases).
 - The PDF report's demo dataset is still the demo dataset — only `source=digest` renders numbers from a real account.
 - Charts are pointer/touch driven but not keyboard operable; a screen-reader data table is not included.
 - The Express server does not compress responses (Vercel's edge does automatically).
@@ -250,5 +253,6 @@ See `FRONTEND-REVIEW.md` for the full audit, measurements and ranked fixes.
 | `npm run typecheck` | TypeScript check for the globe island and pipeline |
 | `npm run ingest` | Runs the Spotify/YouTube ingest pipeline |
 | `npm run digest` | Parses an Audiomack weekly email into `data/audiomack-digest.json` |
+| `npm run inbox` | Pulls unread Audiomack digests over IMAP and stores the new week |
 | `npm run report` | Renders the demo PDF report into `reports/` |
 | `npm test` | Runs the pipeline parser tests (`node --test` via tsx) |
