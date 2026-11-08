@@ -2052,6 +2052,16 @@ function setDataMode(mode, snapshot) {
   }
   if (label) label.textContent = live ? "Live data" : "Demo data";
   document.documentElement.dataset.dataMode = live ? "live" : "demo";
+
+  const note = $("#sourceModeNote");
+  if (note) {
+    note.dataset.mode = live ? "live" : "demo";
+    note.innerHTML = live
+      ? `<span class="note-dot"></span>Public snapshot generated ${escapeHtml(
+          new Date(snapshot.generatedAt).toLocaleString()
+        )} — followers, popularity and channel views are real. Streams, saves and geography still need artist-authorised access.`
+      : `<span class="note-dot"></span>Demo connections — the source cards below are illustrative until a platform is authorised.`;
+  }
 }
 
 /* Prefer the server route (which can proxy a hosted snapshot); fall back to the

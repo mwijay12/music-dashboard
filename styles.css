@@ -1020,6 +1020,17 @@ html.js [data-reveal] { opacity: 0; }
   color: var(--muted);
 }
 .note-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex: none; }
+.source-mode-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 2px 12px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.source-mode-note[data-mode="live"] { color: var(--positive); }
+.source-mode-note[data-mode="live"] .note-dot { background: var(--positive); }
 .muted-icon { color: var(--faint); }
 
 /* ---------- page head ---------- */
