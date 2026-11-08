@@ -129,7 +129,7 @@ npm run build:vercel   # writes public/
 ## Data pipeline
 
 1. Copy `pipeline/artists.example.json` to `pipeline/artists.json` and fill in artist IDs.
-2. Add `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` and `YOUTUBE_API_KEY` to `.env`.
+2. Add `YOUTUBE_API_KEY` and (optionally) `LASTFM_API_KEY` to `.env`. Spotify needs a Premium-owned app and, since Feb 2026, no longer returns followers or popularity — see `docs/GETTING-KEYS.md`.
 3. Run `npm run ingest`.
 
 The pipeline writes `data/live.json`, which the dashboard reads at runtime. `pipeline/artists.json`, generated user data and session secrets are git-ignored.

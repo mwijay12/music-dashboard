@@ -1,78 +1,149 @@
-# The two free keys, with the exact clicks
+# The keys, with the exact clicks — and the one door that is now shut
 
-Both are free, both are self-serve, and neither needs a business registration. Ten minutes total.
+Read the first table, then stop wherever you like. Nothing below is required for
+the dashboard to work: **Deezer needs no key at all**, so
+`/api/benchmark?artist=Limoblaze` already returns real numbers today.
 
-## 1. YouTube — you are already on the right screen
+| Source | What you get | What it costs | Wall |
+|---|---|---|---|
+| **Deezer** | fans (`nb_fan`), albums, top tracks | $0, no signup | none — keyless |
+| **Last.fm** | listeners, play counts, similar artists | $0, instant key | none |
+| **YouTube Data v3** | subscribers, views, video count | $0, Google Cloud key | none |
+| **Spotify Web API** | link, artwork, genres, album list | $0 but **Premium on the owner's account** | ⛔ see §4 |
 
-You are on `console.google.com/apis/credentials` for project **`altraware-automations`**, with the **Create API key** panel open and **YouTube Analytics API + YouTube Data API v3** selected as restrictions. That is exactly right.
+---
 
-What to do on that panel:
+## 1. Deezer — nothing to do
+
+`api.deezer.com` is open for reading. No app, no key, no account. The endpoint
+calls it first and reports `"source":"deezer"` with `artist.fans`.
+
+Rate limit is per IP, roughly 50 requests / 5 s, which the 10-minute cache keeps
+us far away from. If it ever trips you get `error 4` and a hint saying so.
+
+---
+
+## 2. Last.fm — free key in about 60 seconds
+
+1. <https://www.last.fm/api/account/create>
+2. Fill in: **Application name** `timbre-benchmark`, **Application description**
+   "internal artist reach comparison", leave the callback URL empty.
+3. Submit — the next page shows **API key** (32 characters). Copy it. Do not
+   copy the **shared secret**; we do not use it.
+4. That string is `LASTFM_API_KEY`.
+
+Useful because `listeners` tracks the same shape as "how many people actually
+listen", and it exists for small artists too (unlike Chartmetric/kworb).
+
+---
+
+## 3. YouTube — the Google Cloud key
+
+On `console.google.com/apis/credentials` for the project, with the **Create API
+key** panel open and **YouTube Analytics API + YouTube Data API v3** selected:
 
 1. **Name**: `timbre-youtube`
-2. **Select API restrictions**: leave the two you picked — `YouTube Analytics API`, `YouTube Data API v3`
-3. **Application restrictions**: leave **None** (the key is used by a server, never by a browser; the API restriction above is what protects it). If you later want it tighter, restrict to the EC2 box's elastic IP under *IP addresses* — not to Vercel, whose egress IPs change.
-4. Click **Create**
-5. A dialog shows the key: `AIzaSy…` — copy it **from that dialog**, it is the only time it is shown in full. (Later you can always come back here and use *Show key*, but the dialog is easiest.)
-6. Optional but tidy: **Edit** the key afterwards and switch *API restrictions* to **Restrict key → 2 APIs** so it can never be used for anything else in that project.
+2. **API restrictions**: leave the two you picked
+3. **Application restrictions**: leave **None** — the key is used by a server,
+   never a browser; the API restriction above is what protects it. If you later
+   want it tighter, restrict to the EC2 box's elastic IP under *IP addresses* —
+   not to Vercel, whose egress IPs change.
+4. **Create**, then copy `AIzaSy…` from the dialog.
+5. Optional tidy-up: **Edit** the key and set *API restrictions → Restrict key →
+   2 APIs* so it can never be used for anything else in that project.
 
-That string is `YOUTUBE_API_KEY`.
+That string is `YOUTUBE_API_KEY`. Quota: 10,000 units/day; `search.list` = 100
+units, `channels.list` = 1. With the 10-minute cache normal use is a few hundred
+units a day.
 
-**Quota:** 10,000 units/day. One `search.list` costs 100 units, one `channels.list` costs 1. With our 10-minute cache, normal use is a few hundred units a day — nowhere near the limit. If you see `403 quotaExceeded`, wait until midnight Pacific.
+---
 
-> Note: the key is not a secret in the way a client secret is, but treat it as one anyway — a leaked key is your quota, and billing if the project ever gains a paid API.
+## 4. Spotify — the form you were looking at cannot be filled
 
-## 2. Spotify — the token you pasted is the wrong thing
+**What your screen is telling you:** the banner *"Upgrade to Spotify Premium to
+access the Web API"* means your developer account is on the **Free** tier, and
+the **Web API** checkbox is greyed out. That is not a mistake in the form.
 
-What you pasted (`BQCC…`) is a **user access token** from the docs "Try it" console. It:
+Since **11 February 2026**, every new Development Mode Client ID requires the
+account that owns it to hold an **active Spotify Premium subscription**
+(existing apps: 9 March 2026). Spotify states it plainly: *"Development Mode use
+will require a Spotify Premium account."* Free accounts get **HTTP 403** on
+every call — `{"error":{"status":403,"message":"Valid user authentication required"}}`
+or a flat "blocked" body.
 
-- expires in **1 hour**
-- only works for endpoints about *your own* account (`/v1/me/…`) — `/v1/me/top/tracks` is exactly that
-- was just posted in a chat window, so treat it as spent. It cannot be revoked manually; it dies on its own within the hour. Nothing else is exposed by it.
+So there is no correct way to fill that form without paying. Leave it.
 
-We do not use user tokens for the benchmark. We use the **client-credentials** flow, which is app-level and never expires on its own. For that you need two values from your app, not a token:
+**And even with Premium it buys us almost nothing.** The same February 2026
+release removed:
 
-1. <https://developer.spotify.com/dashboard> → open your app
-2. **Settings** → **Client ID** (copy) and **View client secret** → **Client secret** (copy)
-3. That is it. No redirect URI is needed for client credentials, and no user has to log in.
+- `GET /artists/{id}/top-tracks` — **removed**
+- the Artist object's `followers` field — **removed**
+- the Artist object's `popularity` field — **removed**
+- `GET /tracks` popularity — **removed**
+- `GET /search` `limit` capped at **10** (was 50)
 
-- `SPOTIFY_CLIENT_ID` — app id, safe-ish but keep it out of public repos
-- `SPOTIFY_CLIENT_SECRET` — real secret; server-side only
+The two numbers the old benchmark tab displayed (`followers`, `popularity`) no
+longer exist in the API at all. Deezer's `nb_fan` and Last.fm's `listeners`
+replace them, for free.
 
-**What the API gives:** followers, popularity (0–100), genres, top tracks, album art.
-**What it does not give:** monthly listeners or per-day streams. Those are what Chartmetric and kworb estimate from other signals. Our payload says so explicitly rather than inventing a number.
+> **If you ever do get Premium** (or a client already has it), the form is:
+> **App name** `timbre-benchmark` · **App description** "internal artist reach
+> comparison" · **Website** `https://timbre-puce.vercel.app` · **Redirect URI**
+> `https://timbre-puce.vercel.app/api/auth/callback/spotify` (required by the
+> form even though the client-credentials flow never redirects) · **Which
+> APIs/SDKs** tick **Web API** only · tick the terms box. Then
+> **Settings → Client ID** and **View client secret**.
+>
+> Env names stay `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET`. The source will
+> return `partial: true` with `followers: null`, `popularity: null`,
+> `topTracks: []` and the album list — that is the API's ceiling, not a bug.
 
-Free tier: no cost, rate limits are per app and generous for a handful of lookups a minute.
+**What the paid API still does not give:** monthly listeners, per-day streams,
+saves, cities. Those live in **Spotify for Artists**, and for your own act the
+weekly CSV export is still the richest thing available.
 
-## 3. Where they go
+---
 
-**Vercel** (Project `timbre` → Settings → Environment Variables → Production):
+## 5. Where the keys go
+
+**Vercel** — Project `timbre` → Settings → Environment Variables → Production:
 
 ```
+LASTFM_API_KEY=…
+YOUTUBE_API_KEY=AIza…
+# optional, only if the account ever has Premium:
 SPOTIFY_CLIENT_ID=…
 SPOTIFY_CLIENT_SECRET=…
-YOUTUBE_API_KEY=AIza…
 ```
 
-Then **Redeploy** (env changes only apply to new deployments).
+Then **Redeploy** — env changes only apply to new deployments. `DEEZER` needs
+no variable.
 
-**EC2** (`/opt/timbre/.env`) if the box will also make lookups:
+**EC2** (`/opt/timbre/.env`) if the box also makes lookups — same lines.
 
-```dotenv
-SPOTIFY_CLIENT_ID=…
-SPOTIFY_CLIENT_SECRET=…
-YOUTUBE_API_KEY=AIza…
-```
+Never paste a secret or key into chat or commit it.
 
-Never paste the client secret or API key into chat or commit them. Add them in the dashboards above.
+---
 
-## 4. Verify
+## 6. Verify
 
 ```bash
-curl -s 'https://timbre-puce.vercel.app/api/benchmark?artist=Limoblaze' | head -c 600
+curl -s 'https://timbre-puce.vercel.app/api/benchmark?artist=Limoblaze&fresh=1'
 ```
 
-- Good: `"configured": true`, `sources[].found: true`, with `artist.followers` and `channel.subscribers` filled in.
-- Wrong key: `sources[].error` carries the HTTP status and a `hint` telling you which of the two mistakes it is (wrong secret / API not enabled / quota spent).
-- Nothing set yet: `"configured": false` plus a `help` line — the endpoint never 500s.
+What a healthy answer looks like:
 
-Change one artist name per request (`?artist=Ada%20Ehi`), or add `?fresh=1` to skip the 10-minute cache.
+- `"configured": true` (true whenever Deezer answers, since it needs no key)
+- `sources[]` in this order: `deezer`, `lastfm`, `youtube`, `spotify`
+- `deezer.artist.fans` filled in; `lastfm.artist.listeners` and
+  `youtube.channel.subscribers` filled once those two keys are set
+- `spotify.configured: false` with a `reason` naming the missing env vars, or —
+  with keys — `partial: true` and the Feb 2026 note
+- `optionalKeys` lists what each missing key would add
+- `you` carries your own Audiomack numbers (`plays7d`, `lifetime`)
+
+Failures never 500. Each source carries `error` plus a `hint` that names the
+actual mistake: bad key, YouTube API not enabled, Spotify app blocked for a Free
+account, Deezer's per-IP quota, or a network failure from the host.
+
+Add `?fresh=1` to skip the 10-minute cache; change `?artist=` per act.

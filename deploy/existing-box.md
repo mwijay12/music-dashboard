@@ -53,9 +53,11 @@ IMAP_FOLDER=INBOX
 DIGEST_SENDER=audiomack
 DIGEST_TOKEN=<long random>          # protects /api/digest
 # public-source benchmark (optional)
+YOUTUBE_API_KEY=
+LASTFM_API_KEY=
+# optional; needs a Spotify Premium-owned app, and returns no followers/popularity since Feb 2026
 SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
-YOUTUBE_API_KEY=
 ```
 
 Remember: if `BASE_URL` has a path prefix (`/timbre`), the Google authorized origin is still the bare origin — `https://mwijay.duckdns.org`.

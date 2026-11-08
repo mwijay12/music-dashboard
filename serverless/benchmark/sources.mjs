@@ -7,18 +7,33 @@
  * not a stats mirror; it is the comparison the artist cannot make by hand:
  * "the acts you want to be like have these numbers, here is the gap".
  *
- * Sources used here are the two that are legitimately self-serve:
- *   - Spotify Web API, client-credentials flow (no user login, no OAuth screen)
- *   - YouTube Data API v3, plain API key
- * Everything is key-gated: with no keys the endpoint returns a structured
- * "unconfigured" payload instead of throwing.
+ * Sources, in the order they matter:
+ *   - Deezer, keyless public API — works with no account at all (`nb_fan`)
+ *   - Last.fm, free self-serve key — listeners + play counts
+ *   - YouTube Data API v3, plain API key — subscribers, views
+ *   - Spotify Web API, client-credentials — catalogue only since Feb 2026,
+ *     because Dev Mode now needs Premium and the API dropped follower,
+ *     popularity and top-track data
+ * Nothing throws: a source that cannot run reports `configured:false`, and the
+ * payload stays useful as long as one source answers.
  */
 
 /** Turns an opaque HTTP status into something the operator can act on. */
 export function hintFor(message = "") {
   const text = String(message);
+
+  // Provider-specific first: their messages also contain a status code.
+  if (/deezer/i.test(text) && /error 4|quota/i.test(text)) {
+    return "Deezer's keyless API is rate limited per IP (about 50 requests per 5 seconds). Back off and retry; no key is involved.";
+  }
+  if (/last\.?fm|audioscrobbler/i.test(text) && /\b(401|403)\b/.test(text)) {
+    return "Last.fm rejected the key: check LASTFM_API_KEY (it is the 32-character key, not the shared secret) or that the key was not suspended.";
+  }
+  if (/spotify/i.test(text) && /\b(401|403)\b/.test(text)) {
+    return "Spotify rejected the client ID/secret, or the app is blocked. Since Feb 2026 Development Mode apps require a Spotify Premium owner; free accounts get 403 on every call.";
+  }
   if (/\b401\b/.test(text)) {
-    return "The key/secret was rejected. Spotify: client ID or secret is wrong. YouTube: the API key is wrong or was deleted.";
+    return "The key/secret was rejected. YouTube: the API key is wrong or was deleted.";
   }
   if (/\b403\b/.test(text)) {
     return "Access forbidden: for YouTube this usually means the API is not enabled on the key's project, the key is restricted to other APIs, or the daily quota (10,000 units) is spent.";
@@ -28,6 +43,9 @@ export function hintFor(message = "") {
   }
   if (/\b429\b/.test(text)) {
     return "Rate limited. Wait a few minutes; Spotify's client-credentials calls are limited per app.";
+  }
+  if (/\b50[234]\b/.test(text)) {
+    return "The provider returned a server error. Usually transient — retry in a minute; nothing to fix on our side.";
   }
   if (/timeout|aborted|fetch failed|ENOTFOUND|ECONN/i.test(text)) {
     return "Network failure reaching the provider from the server. On EC2, check outbound DNS/egress.";
@@ -65,12 +83,29 @@ async function getSpotifyToken({ clientId, clientSecret, fetchImpl }) {
   return spotifyToken.value;
 }
 
+/**
+ * Spotify, as of the February 2026 Web API changes.
+ *
+ * Two things changed under us:
+ *   1. Development Mode now requires the app owner to hold Spotify Premium, so
+ *      the keys can only exist for a paying account.
+ *   2. `GET /artists/{id}/top-tracks` was removed, and the `followers` and
+ *      `popularity` fields were stripped from the Artist object.
+ *
+ * So this source is kept for the catalogue facts it still returns (name,
+ * artwork, genres, link, albums) and reports the missing numbers as null
+ * instead of pretending. Deezer and Last.fm below carry the audience numbers.
+ */
 export async function lookupSpotify(artistName, options = {}) {
   const clientId = options.clientId ?? process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = options.clientSecret ?? process.env.SPOTIFY_CLIENT_SECRET;
   const fetchImpl = options.fetchImpl ?? fetch;
   if (!clientId || !clientSecret) {
-    return { source: "spotify", configured: false, reason: "SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET not set" };
+    return {
+      source: "spotify",
+      configured: false,
+      reason: "SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET not set (Spotify needs a Premium account to create the app)",
+    };
   }
 
   try {
@@ -82,13 +117,14 @@ export async function lookupSpotify(artistName, options = {}) {
       return response.json();
     };
 
-    const search = await call(`/search?type=artist&limit=1&q=${encodeURIComponent(artistName)}`);
+    // `limit` max dropped from 50 to 10 in Feb 2026.
+    const search = await call(`/search?type=artist&limit=10&q=${encodeURIComponent(artistName)}`);
     const hit = search?.artists?.items?.[0];
     if (!hit) return { source: "spotify", configured: true, found: false };
 
-    const [artist, topTracks] = await Promise.all([
-      call(`/artists/${hit.id}`),
-      call(`/artists/${hit.id}/top-tracks?market=US`).catch(() => ({ tracks: [] })),
+    const [artist, albums] = await Promise.all([
+      call(`/artists/${encodeURIComponent(hit.id)}`),
+      call(`/artists/${encodeURIComponent(hit.id)}/albums?include_groups=album,single&limit=5`).catch(() => ({ items: [] })),
     ]);
 
     return {
@@ -104,15 +140,140 @@ export async function lookupSpotify(artistName, options = {}) {
         genres: artist.genres ?? [],
         image: artist.images?.[0]?.url ?? null,
       },
-      topTracks: (topTracks.tracks ?? []).slice(0, 5).map((track) => ({
-        title: track.name,
-        popularity: track.popularity ?? null,
-        url: track.external_urls?.spotify ?? null,
+      topTracks: [],
+      albums: (albums.items ?? []).slice(0, 5).map((album) => ({
+        title: album.name,
+        type: album.album_type ?? null,
+        releaseDate: album.release_date ?? null,
+        url: album.external_urls?.spotify ?? null,
       })),
-      note: "Spotify does not publish monthly listeners or per-day streams through this API; aggregators estimate them.",
+      partial: true,
+      note:
+        "Spotify's Feb 2026 API no longer returns artist followers/popularity and removed top-tracks; those fields are null. Deezer and Last.fm provide the audience numbers.",
     };
   } catch (error) {
     return { source: "spotify", configured: true, found: false, error: error.message, hint: hintFor(error.message) };
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Deezer — keyless.
+ *
+ * No app, no OAuth, no account: `api.deezer.com` is open for reading.
+ * That makes it the one public source that can never be taken away from
+ * this endpoint by a signup wall, so it is the default audience datapoint.
+ * `nb_fan` is Deezer's own follower count — the closest thing to the
+ * Spotify follower number we lost.
+ * ------------------------------------------------------------------ */
+const DEEZER_API = "https://api.deezer.com";
+const LASTFM_API = "https://ws.audioscrobbler.com/2.0/";
+
+function deezerError(body, what) {
+  const error = body?.error;
+  if (!error) return null;
+  const detail = typeof error === "string" ? error : error.message || error.type || "unknown error";
+  return new Error(`Deezer ${what} error${error.code ? ` ${error.code}` : ""}: ${detail}`);
+}
+
+export async function lookupDeezer(artistName, options = {}) {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const call = async (path) => {
+    const response = await fetchImpl(`${DEEZER_API}${path}`, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    // Deezer signals quota/errors with a 200 and an `error` object.
+    const body = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(`Deezer ${path} HTTP ${response.status}`);
+    const error = deezerError(body, path.split("?")[0]);
+    if (error) throw error;
+    return body;
+  };
+
+  try {
+    const search = await call(`/search/artist?q=${encodeURIComponent(artistName)}&limit=1`);
+    const hit = search?.data?.[0];
+    if (!hit) return { source: "deezer", configured: true, found: false };
+
+    const [artist, top] = await Promise.all([
+      call(`/artist/${encodeURIComponent(hit.id)}`),
+      call(`/artist/${encodeURIComponent(hit.id)}/top?limit=5`).catch(() => ({ data: [] })),
+    ]);
+
+    return {
+      source: "deezer",
+      configured: true,
+      found: true,
+      artist: {
+        name: artist.name ?? hit.name ?? null,
+        id: artist.id ?? hit.id,
+        url: artist.link ?? hit.link ?? null,
+        fans: Number(artist.nb_fan ?? hit.nb_fan ?? 0),
+        albums: Number(artist.nb_album ?? hit.nb_album ?? 0),
+        image: artist.picture_xl ?? artist.picture_big ?? hit.picture_big ?? null,
+      },
+      topTracks: (top?.data ?? []).slice(0, 5).map((track) => ({
+        title: track.title ?? null,
+        rank: track.rank ?? null,
+        url: track.link ?? null,
+      })),
+      note: "Deezer is keyless; 'fans' is Deezer's follower count, not Spotify listeners.",
+    };
+  } catch (error) {
+    return { source: "deezer", configured: true, found: false, error: error.message, hint: hintFor(error.message) };
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Last.fm — free key, no approval, no Premium.
+ *
+ * `listeners` is a scrobbler audience count and it is the only free
+ * figure that tracks the same shape as "how many people actually listen
+ * to this act", which is the comparison the tab exists for.
+ * ------------------------------------------------------------------ */
+export async function lookupLastfm(artistName, options = {}) {
+  const apiKey = options.apiKey ?? process.env.LASTFM_API_KEY;
+  const fetchImpl = options.fetchImpl ?? fetch;
+  if (!apiKey) {
+    return { source: "lastfm", configured: false, reason: "LASTFM_API_KEY not set (free key, no approval)" };
+  }
+
+  try {
+    const url =
+      `${LASTFM_API}?method=artist.getinfo&artist=${encodeURIComponent(artistName)}` +
+      `&api_key=${encodeURIComponent(apiKey)}&format=json&autocorrect=1`;
+    const response = await fetchImpl(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(8000) });
+    const body = await response.json().catch(() => null);
+
+    if (!response.ok || body?.error) {
+      // 6 = artist not found; that is an answer, not a failure.
+      if (body?.error === 6) return { source: "lastfm", configured: true, found: false };
+      const detail = body?.message ? `: ${body.message}` : "";
+      throw new Error(`Last.fm HTTP ${response.status}${body?.error ? ` (error ${body.error})` : ""}${detail}`);
+    }
+
+    const artist = body?.artist;
+    if (!artist) return { source: "lastfm", configured: true, found: false };
+
+    const images = Array.isArray(artist.image) ? artist.image : [];
+    const largest = [...images].reverse().find((entry) => entry?.["#text"]);
+
+    return {
+      source: "lastfm",
+      configured: true,
+      found: true,
+      artist: {
+        name: artist.name ?? null,
+        url: artist.url ?? null,
+        listeners: Number(artist.stats?.listeners ?? 0),
+        playcount: Number(artist.stats?.playcount ?? 0),
+        image: largest?.["#text"] ?? null,
+      },
+      similar: (artist.similar?.artist ?? []).slice(0, 5).map((entry) => entry.name).filter(Boolean),
+      note: "Last.fm listeners are scrobbles, not streams; use it for relative reach, not revenue.",
+    };
+  } catch (error) {
+    return { source: "lastfm", configured: true, found: false, error: error.message, hint: hintFor(error.message) };
   }
 }
 
@@ -206,27 +367,41 @@ export async function resolveBenchmark({ artist, digest = null, fetchImpl = fetc
   const name = String(artist || "").trim();
   if (!name) return { error: "Missing artist name." };
 
-  const [spotify, youtube] = await Promise.all([
+  const [spotify, deezer, lastfm, youtube] = await Promise.all([
     lookupSpotify(name, {
       fetchImpl,
       clientId: env.SPOTIFY_CLIENT_ID,
       clientSecret: env.SPOTIFY_CLIENT_SECRET,
     }),
+    lookupDeezer(name, { fetchImpl }),
+    lookupLastfm(name, { fetchImpl, apiKey: env.LASTFM_API_KEY }),
     lookupYouTube(name, { fetchImpl, apiKey: env.YOUTUBE_API_KEY }),
   ]);
 
-  const anyConfigured = spotify.configured || youtube.configured;
+  // Deezer needs no key, so the endpoint is functional unless it is also down.
+  const anyConfigured = spotify.configured || deezer.configured || lastfm.configured || youtube.configured;
+  const optionalKeys = [
+    { env: "YOUTUBE_API_KEY", adds: "YouTube subscribers, views and video count (Google Cloud, free)" },
+    { env: "LASTFM_API_KEY", adds: "Last.fm listeners and play counts (free, instant, no approval)" },
+    {
+      env: "SPOTIFY_CLIENT_ID + SPOTIFY_CLIENT_SECRET",
+      adds: "Spotify link/artwork/albums only — needs a Premium account, and since Feb 2026 gives no followers or popularity",
+    },
+  ];
+
   return {
     query: name,
     fetchedAt: new Date().toISOString(),
     configured: anyConfigured,
-    sources: [spotify, youtube],
+    keyless: ["deezer"],
+    sources: [deezer, lastfm, youtube, spotify],
+    optionalKeys,
     you: ownNumbers(digest),
     ...(anyConfigured
       ? {}
       : {
           help:
-            "Add SPOTIFY_CLIENT_ID/SPOTIFY_CLIENT_SECRET (developer.spotify.com → Create app) or YOUTUBE_API_KEY (Google Cloud → APIs & Services → Credentials) to enable public-source lookups.",
+            "Every source failed. Deezer needs no key at all — if it failed too, the function cannot reach the public internet, which is an infrastructure problem, not a configuration one.",
         }),
   };
 }

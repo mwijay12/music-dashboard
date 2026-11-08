@@ -17,18 +17,6 @@ interface SpotifyArtistResponse {
   external_urls?: { spotify?: string };
 }
 
-interface SpotifyTracksResponse {
-  tracks: Array<{
-    id: string;
-    name: string;
-    popularity: number;
-    duration_ms: number;
-    preview_url: string | null;
-    album?: { name?: string; release_date?: string };
-    external_urls?: { spotify?: string };
-  }>;
-}
-
 interface SpotifyAlbumsResponse {
   items: Array<{
     id: string;
@@ -86,24 +74,18 @@ async function spotifyGet<T>(path: string): Promise<T> {
 export async function fetchSpotifyArtist(artistId: string, market = "US"): Promise<SpotifyArtistData> {
   const safeMarket = /^[A-Za-z]{2}$/.test(market) ? market.toUpperCase() : "US";
 
-  const [artist, topTracks, albums] = await Promise.all([
+  // Spotify's February 2026 changes removed `/artists/{id}/top-tracks` and the
+  // `followers`/`popularity` fields on the Artist object, so this connector now
+  // only reads what still exists: identity, artwork, genres and albums.
+  const [artist, albums] = await Promise.all([
     spotifyGet<SpotifyArtistResponse>(`/artists/${encodeURIComponent(artistId)}`),
-    spotifyGet<SpotifyTracksResponse>(`/artists/${encodeURIComponent(artistId)}/top-tracks?market=${safeMarket}`),
     spotifyGet<SpotifyAlbumsResponse>(
       `/artists/${encodeURIComponent(artistId)}/albums?include_groups=album,single&limit=10&market=${safeMarket}`
     ),
   ]);
 
-  const normalizedTracks: SpotifyTrack[] = (topTracks.tracks || []).slice(0, 5).map((track) => ({
-    id: track.id,
-    name: track.name,
-    popularity: track.popularity ?? 0,
-    durationMs: track.duration_ms ?? 0,
-    previewUrl: track.preview_url ?? null,
-    album: track.album?.name ?? "",
-    releaseDate: track.album?.release_date ?? null,
-    url: track.external_urls?.spotify ?? null,
-  }));
+  // Spotify no longer exposes a top-tracks endpoint, so this stays empty.
+  const normalizedTracks: SpotifyTrack[] = [];
 
   const normalizedAlbums: SpotifyAlbum[] = (albums.items || []).map((album) => ({
     id: album.id,

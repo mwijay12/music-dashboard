@@ -74,7 +74,11 @@ async function main() {
     if (artist.spotifyArtistId) {
       try {
         spotify = await fetchSpotifyArtist(artist.spotifyArtistId, config.market);
-        console.log(`Spotify: ${artist.name} (${spotify.followers.toLocaleString()} followers)`);
+        console.log(
+          `Spotify: ${artist.name} (${
+            spotify.followers ? `${spotify.followers.toLocaleString()} followers` : "followers no longer published since Feb 2026"
+          })`
+        );
       } catch (error) {
         errors.push(`Spotify: ${errorMessage(error)}`);
         console.warn(`Spotify skipped for ${artist.name}: ${errorMessage(error)}`);
