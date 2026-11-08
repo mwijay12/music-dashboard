@@ -2,6 +2,8 @@
 
 An artist-intelligence dashboard: streaming momentum, catalog performance, audience geography and competitive context in one workspace.
 
+**Live deployment:** <https://timbre-puce.vercel.app> (Vercel project `timbre`, built from this repo).
+
 **Important, up front:** Timbre is a **demo-first** dashboard. The interface, motion system, charts, routing, command palette and auth are real and fully wired. The private numbers it displays (streams, monthly listeners, saves, revenue, per-city listeners, the live ticker) are **generated deterministically in the browser**, not fetched from Spotify or Apple Music. Public metadata (followers, popularity, channel views) becomes real as soon as you run the ingest pipeline. See [What is real today](#what-is-real-today) and [Making it functional](#making-it-functional).
 
 The UI labels its own data state: the badge in the top bar reads **Demo data** until a snapshot with artists is loaded, then switches to **Live data**.
