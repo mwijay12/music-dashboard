@@ -7,7 +7,7 @@
   "trailingSlash": false,
   "functions": {
     "api/report.js": {
-      "includeFiles": ["node_modules/pdfkit/js/data/**", "data/audiomack-digest.json"]
+      "includeFiles": "{node_modules/pdfkit/js/data/**,data/audiomack-digest.json}"
     }
   },
   "redirects": [
