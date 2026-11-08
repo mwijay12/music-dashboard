@@ -18,3 +18,7 @@ public/
 
 # generated PDFs
 reports/
+
+# studio: personal config and generated research
+studio/research.json
+data/studio/

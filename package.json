@@ -15,7 +15,8 @@
     "test": "node --import tsx --test \"pipeline/src/**/*.test.ts\"",
     "digest": "tsx pipeline/src/digest.ts",
     "report": "node scripts/render-report.mjs",
-    "inbox": "tsx pipeline/src/inbox.ts"
+    "inbox": "tsx pipeline/src/inbox.ts",
+    "studio:research": "tsx pipeline/src/studio/research-cli.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

@@ -1,0 +1,14 @@
+{
+  "$comment": "Copy to studio/research.json. `seeds` are what you want YouTube autocomplete to expand; `channels` are the competitors whose RSS feeds you want to track (the UC… id, not the @handle).",
+  "language": "sw",
+  "seeds": [
+    "kwaya minus one",
+    "backing track nyimbo za kwaya",
+    "amapiano gospel mix",
+    "gospel amapiano instrumental",
+    "instrumental worship swahili"
+  ],
+  "channels": [
+    { "label": "example competitor", "channelId": "UCxxxxxxxxxxxxxxxxxxxxxx" }
+  ]
+}
