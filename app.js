@@ -2797,7 +2797,10 @@ function initActions() {
   $$("[data-export]").forEach((button) => button.addEventListener("click", exportCsv));
 
   $$("[data-connect-source]").forEach((button) => {
-    button.addEventListener("click", () => showToast("Opening secure source connection"));
+    button.addEventListener("click", () => {
+      /* Honest placeholder until the OAuth connectors exist (see README). */
+      showToast("Source OAuth is not configured yet — see README › Making it functional");
+    });
   });
 
   const repeat = $("#repeatPause");

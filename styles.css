@@ -3048,6 +3048,11 @@ dialog:not([open]) { display: none; }
   .mini-track:hover { transform: none; }
 }
 
+/* No hover on touch: reveal controls that only appear on hover. */
+@media (hover: none) {
+  .release-play { opacity: 1; transform: none; }
+}
+
 @media (max-width: 820px) {
   /* The breadcrumb repeats the page title; the data-source pill matters more. */
   .crumbs { display: none; }
