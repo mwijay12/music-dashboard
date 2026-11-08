@@ -1,0 +1,117 @@
+{
+  "$comment": "Content + prompt pack for the two niches. Values are starting points, not laws: change them after your own research run disagrees. Suno responds best to English genre language, so prompts are English while titles/descriptions stay Swahili-first.",
+  "niches": [
+    {
+      "id": "kwaya-minus-one",
+      "name": "Kwaya Minus-One — Swahili choir backing tracks",
+      "why": "Choirs and worship teams in TZ/KE search for a track they can sing over, not for a song to listen to. Demand is functional, the intent is immediate, and almost nobody serves it with clean, key-labelled audio. AI is genuinely good at this: steady tempo, no vocal, repeatable structure.",
+      "audience": "Church choir leaders, worship teams, soloists practising for Sunday, wedding choirs",
+      "seeds": [
+        "kwaya minus one",
+        "backing track nyimbo za kwaya",
+        "minus one swahili worship",
+        "instrumental gospel swahili",
+        "nyimbo za kwaya instrumental"
+      ],
+      "formats": [
+        {
+          "id": "single-minus-one",
+          "label": "Single minus-one with a count-in and key label",
+          "length": "4–6 min",
+          "cadence": "2 per week",
+          "sunoPrompt": "Swahili gospel choir accompaniment, instrumental only, no vocals, no choir, warm Rhodes piano and soft pad, gentle shaker and congas, 78 BPM, key of F major, four-bar count-in, verse-chorus-verse-chorus-bridge-chorus structure, clean headroom for a live choir, warm analog mix, no lead melody louder than the pad",
+          "negative": "no vocals, no choir, no auto-tune, no drums solo, no key change, no fade-out ending",
+          "structure": "[count-in 4 bars][intro 4 bars][verse 16][chorus 16][verse 16][chorus 16][bridge 8][chorus 16][tag 8][end on tonic]",
+          "titleFormula": "{Jina la wimbo} — Minus One (Kwaya) | Key {Key} | {BPM} BPM",
+          "description": "Minus one ya {Jina la wimbo} kwa ajili ya kwaya na worship teams. Key: {Key}. Tempo: {BPM} BPM. Count-in ya baa 4 kabla ya kuanza.\n\nKama unahitaji key nyingine au tempo tofauti, andika comment — tunarekodi maombi kila wiki.\n\n#MinusOne #Kwaya #NyimboZaKwaya #GospelSwahili #BackingTrack",
+          "thumbnailBrief": "Dark green background, big white Swahili title, small chips reading the key and BPM, one icon of a music stand. No faces, no stock photos."
+        },
+        {
+          "id": "medley-ten",
+          "label": "10-minute worship medley (three songs, one key journey)",
+          "length": "10 min",
+          "cadence": "1 per week",
+          "sunoPrompt": "Continuous Swahili gospel worship medley, instrumental only, no vocals, three movements in F major then G major then A major, soft piano-led pads with light percussion entering at minute two, 72 BPM, seamless transitions, no silence between movements, church ambience, warm and unhurried",
+          "negative": "no vocals, no spoken word, no abrupt stops, no applause, no fade between songs",
+          "structure": "[intro 30s][song A 3:30][transition 20s][song B 3:30][transition 20s][song C 2:30][outro 40s]",
+          "titleFormula": "Worship Medley {Mada} — Minus One | Dakika 10 | Kwaya",
+          "description": "Medley ya dakika 10 kwa ajili ya maandalizi ya ibada: {Orodha ya nyimbo}. Instrumental tu, hakuna sauti.\n\nTumia kwa rehearsal, kwa maandalizi ya Jumapili, au kwa kwaya kufanya mazoezi ya mpito kati ya nyimbo.\n\n#WorshipMedley #Kwaya #MinusOne #GospelSwahili",
+          "thumbnailBrief": "Three stacked song titles on a warm gradient, the words \"DAKIKA 10\" large, small key progression chip."
+        }
+      ],
+      "titleFormulas": [
+        "{Jina la wimbo} — Minus One (Kwaya) | Key {Key}",
+        "{Jina la wimbo} Minus One | Backing Track ya Kwaya | {BPM} BPM",
+        "{Jina la wimbo} — Instrumental Gospel (Swahili) | Key {Key}"
+      ],
+      "humanProof": [
+        "Andika maneno ya wimbo mwenyewe (au tumia wimbo wa zamani wa umma) na uyaweke kwenye description — hii ni kazi yako ya ubunifu inayoonekana.",
+        "Pima key na BPM kwa kifaa halisi na uandike kwenye title; usiandike namba za kubahatisha.",
+        "Rekodi count-in kwa sauti yako mwenyewe (\"moja, mbili, tatu, nne\") — sekunde 4 za binadamu zinatosha kuondoa hisia ya kitu kilichotengenezwa kiotomatiki.",
+        "Weka comment iliyopigiliwa msumari yenye maneno yote ya wimbo.",
+        "Tengeneza sheet/PDF ya chords na uiweke kwenye link ya description."
+      ]
+    },
+    {
+      "id": "amapiano-gospel",
+      "name": "Amapiano Gospel — instrumental mixes for work, prayer and commute",
+      "why": "You already have the account (Piano Sifa Afro Gospel Amapiano Hub) and the genre language. Long-form mixes give watch time that single tracks cannot, and the format is proven without needing a face or a studio.",
+      "audience": "Listeners aged 18–35 in TZ/KE/ZA who play gospel amapiano while working, driving or praying",
+      "seeds": [
+        "amapiano gospel mix",
+        "amapiano gospel instrumental",
+        "gospel amapiano 2026",
+        "amapiano worship mix",
+        "piano sifa gospel"
+      ],
+      "formats": [
+        {
+          "id": "one-hour-mix",
+          "label": "1-hour instrumental mix, one tempo family",
+          "length": "58–62 min",
+          "cadence": "1 per week",
+          "sunoPrompt": "Afro gospel amapiano instrumental mix, log drum bass, shakers, marimba and warm pad, no vocals, 112 BPM, one continuous key centre with slow modulations every four tracks, spacious mix, soft transitions with filtered drums, church-organ pad entering occasionally",
+          "negative": "no vocals, no MC, no radio drops, no hard cuts, no sudden tempo change",
+          "structure": "[intro 60s][track 1 5:00][transition 15s][track 2 5:00] … [outro 90s]",
+          "titleFormula": "Amapiano Gospel Mix {Mwezi} | Instrumental | Saa 1 ya Ibada",
+          "description": "Saa moja ya amapiano gospel instrumental — kwa kazi, safari, au maandalizi ya maombi. Hakuna sauti, hakuna matangazo.\n\nTracklist:\n00:00 {Jina}\n05:15 {Jina}\n…\n\n#AmapianoGospel #GospelAmapiano #Instrumental #PianoSifa",
+          "thumbnailBrief": "Bold month + \"SAA 1\" text, log-drum waveform strip along the bottom, one warm colour per month so the channel grid looks like a series."
+        },
+        {
+          "id": "shorts-hook",
+          "label": "30-second Shorts hook cut from the mix",
+          "length": "25–35 s",
+          "cadence": "3 per week",
+          "sunoPrompt": "Single amapiano gospel loop, log drum hook, 112 BPM, no vocals, 30 seconds, loopable, ends on the downbeat",
+          "negative": "no vocals, no fade, no intro silence",
+          "structure": "[hook 4 bars][variation 8 bars]",
+          "titleFormula": "{Hook ya wimbo} 😤 | Amapiano Gospel",
+          "description": "Loop kutoka mix ya {Mwezi}. Mix kamili kwenye channel.\n\n#Shorts #AmapianoGospel",
+          "thumbnailBrief": "Vertical, one strong frame of the waveform, no text needed beyond three words."
+        }
+      ],
+      "titleFormulas": [
+        "Amapiano Gospel Mix {Mwezi} | Instrumental | Saa 1",
+        "Gospel Amapiano 2026 — {Mada} | Instrumental Mix",
+        "Amapiano Gospel for Prayer | Saa 1 | No Vocals"
+      ],
+      "humanProof": [
+        "Chagua nyimbo kwa mkono na uandike tracklist halisi yenye muda — hii ni curation, na ndiyo inayotofautisha mix na faili zilizochujwa.",
+        "Ongeza sauti yako ya utangulizi wa sekunde 15 (\"karibu kwenye mix ya Novemba\") — inathibitisha mtu halisi.",
+        "Tengeneza cover art yako mwenyewe (Canva) kwa mfululizo unaoonekana.",
+        "Jibu comments kila wiki; YouTube inahesabu hilo kwenye \"original value\" ya channel."
+      ]
+    }
+  ],
+  "publishing": {
+    "$comment": "EAT = UTC+3. Adjust only when your own analytics disagree with these defaults.",
+    "slots": [
+      { "day": "Friday", "hourEat": 18, "reason": "Choir leaders prepare for Sunday on Friday evening and Saturday morning." },
+      { "day": "Saturday", "hourEat": 9, "reason": "Second wave of Sunday preparation; also the strongest window for long mixes." },
+      { "day": "Sunday", "hourEat": 20, "reason": "Post-service listeners, phone in hand, looking for what they sang." },
+      { "day": "Wednesday", "hourEat": 19, "reason": "Midweek rehearsal; good slot for Shorts that point back to the catalogue." }
+    ],
+    "disclosure": "Every upload that is mostly AI audio must switch on the \"Altered or synthetic content\" toggle in YouTube Studio. YouTube states this does not reduce reach or monetisation, but skipping it risks penalties later.",
+    "uploadsPerWeek": { "kwaya-minus-one": 3, "amapiano-gospel": 4 }
+  }
+}
