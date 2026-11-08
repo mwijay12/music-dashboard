@@ -1,4 +1,10 @@
-# Audiomack Data API — access request
+# Audiomack Data API — access request (ON HOLD)
+
+> **Status (2026-11-08): not sent — the artist decided against requesting access.**
+> Nothing in the product depends on it. The weekly statistics email already
+> supplies the Audiomack numbers, so the daily-series upgrade stays available
+> rather than pursued. Revisit only if a per-track daily curve becomes a real
+> requirement. Keep the draft for that day; do not send it by default.
 
 There is no self-serve portal: Audiomack issues OAuth 1.0a consumer keys by hand. Their own developer guidance says to request a key through their support channel, so the email below is the whole process.
 

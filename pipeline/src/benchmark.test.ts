@@ -120,3 +120,26 @@ test("empty artist name is rejected", async () => {
   const payload = await resolveBenchmark({ artist: "   ", env: {} });
   assert.equal(payload.error, "Missing artist name.");
 });
+
+test("HTTP failures carry an actionable hint instead of a bare status", async () => {
+  const forbidden = fakeFetch([["/search", { status: 403, body: {} }]]);
+  const spotify = await lookupSpotify("Limoblaze", { clientId: "id", clientSecret: "s", token: "t", fetchImpl: forbidden });
+  assert.equal(spotify.found, false);
+  assert.match(spotify.error, /403/);
+  assert.match(spotify.hint, /not enabled|restricted|quota/);
+
+  const yt = await lookupYouTube("@limoblaze", {
+    apiKey: "k",
+    fetchImpl: fakeFetch([["forHandle=", { status: 403, body: {} }], ["youtube/v3/search", { status: 403, body: {} }]]),
+  });
+  assert.equal(yt.found, false);
+  assert.match(yt.hint, /403|forbidden|quota/i);
+
+  const bad = await lookupSpotify("Limoblaze", {
+    clientId: "id",
+    clientSecret: "s",
+    token: "t",
+    fetchImpl: fakeFetch([["/search", { status: 401, body: {} }]]),
+  });
+  assert.match(bad.hint, /rejected/);
+});

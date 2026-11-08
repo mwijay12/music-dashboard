@@ -51,6 +51,17 @@ A beautiful dashboard that nobody opens is a portfolio piece. The Instagram-anal
 2. **Manager / label reporting.** Same engine, N artists, one PDF each, benchmark against genre peers. Charge per artist per month. The benchmark endpoint is what makes the pitch credible ("here is how your act compares to the acts you want to be").
 3. **White-label for labels, churches and media houses in TZ/KE/NG.** They have artists with no analytics and no staff to build this. Your edge is the ingestion (weekly email parsing, CSV, YouTube) and the report voice — not the charts.
 
+## Keys and what each unlocks
+
+| Source | Access | Gives | Status |
+| --- | --- | --- | --- |
+| Audiomack weekly email | already in your inbox | 7-day plays, lifetime per track | **live** |
+| Spotify Web API (client credentials) | self-serve, free | followers, popularity, top tracks, genres | key needed — `docs/GETTING-KEYS.md` |
+| YouTube Data API v3 | self-serve, free, 10k units/day | subscribers, total views, video count | key needed — `docs/GETTING-KEYS.md` |
+| YouTube Analytics API | OAuth as channel owner | daily views, watch time, traffic sources | optional next step |
+| Spotify for Artists | manual CSV export | saves, cities, sources, playlist adds | manual |
+| Audiomack Data API | hand-issued by Audiomack | daily per-track plays | **declined** — email digest is enough |
+
 ## What not to build
 
 - A generic "search any artist" page as the headline feature — Google already wins that, and it would put you head-to-head with Chartmetric.

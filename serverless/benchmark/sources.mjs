@@ -14,6 +14,27 @@
  * "unconfigured" payload instead of throwing.
  */
 
+/** Turns an opaque HTTP status into something the operator can act on. */
+export function hintFor(message = "") {
+  const text = String(message);
+  if (/\b401\b/.test(text)) {
+    return "The key/secret was rejected. Spotify: client ID or secret is wrong. YouTube: the API key is wrong or was deleted.";
+  }
+  if (/\b403\b/.test(text)) {
+    return "Access forbidden: for YouTube this usually means the API is not enabled on the key's project, the key is restricted to other APIs, or the daily quota (10,000 units) is spent.";
+  }
+  if (/\b400\b/.test(text)) {
+    return "Bad request: a restricted key or a malformed handle. Check the API restrictions on the key.";
+  }
+  if (/\b429\b/.test(text)) {
+    return "Rate limited. Wait a few minutes; Spotify's client-credentials calls are limited per app.";
+  }
+  if (/timeout|aborted|fetch failed|ENOTFOUND|ECONN/i.test(text)) {
+    return "Network failure reaching the provider from the server. On EC2, check outbound DNS/egress.";
+  }
+  return null;
+}
+
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 const SPOTIFY_API = "https://api.spotify.com/v1";
 const YOUTUBE_API = "https://www.googleapis.com/youtube/v3";
@@ -91,7 +112,7 @@ export async function lookupSpotify(artistName, options = {}) {
       note: "Spotify does not publish monthly listeners or per-day streams through this API; aggregators estimate them.",
     };
   } catch (error) {
-    return { source: "spotify", configured: true, found: false, error: error.message };
+    return { source: "spotify", configured: true, found: false, error: error.message, hint: hintFor(error.message) };
   }
 }
 
@@ -162,7 +183,7 @@ export async function lookupYouTube(input, options = {}) {
       },
     };
   } catch (error) {
-    return { source: "youtube", configured: true, found: false, error: error.message };
+    return { source: "youtube", configured: true, found: false, error: error.message, hint: hintFor(error.message) };
   }
 }
 

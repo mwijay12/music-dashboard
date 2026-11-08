@@ -228,3 +228,15 @@ Deliberately **out of scope**: SoundCloud (API closed), Apple Music analytics (n
 | Optional n8n | $0 (self-hosted, same box) |
 | Optional Soundcharts / Apify | $50–500 (only if you want cross-platform plays without uploading CSVs) |
 | Google CASA (only if Gmail becomes a public feature) | ~$40–375/mo amortised |
+
+
+## Audiomack API — decided against (2026-11-08)
+
+Access is hand-issued (OAuth 1.0a consumer key/secret via Audiomack support), and the artist opted not to send the request. Consequence, accepted deliberately:
+
+- Audiomack numbers come from the **weekly statistics email only** (`npm run inbox`), so plays are weekly totals — no daily curve, no per-track daily deltas.
+- The dashboard labels these correctly ("103 plays · 7 days" next to "750 · lifetime") instead of faking a series.
+- What replaces the missing granularity: **Spotify for Artists CSV** (weekly, includes saves and cities) and **YouTube Analytics** (daily, via OAuth) — both are owner data and neither needs Audiomack's approval.
+- The draft request is preserved at `docs/outreach/audiomack-api-request.md` if this changes.
+
+Support for the API is already written (`AUDIOMACK_CONSUMER_KEY`/`_SECRET` env names, signed-request notes); it stays dormant.
