@@ -79,10 +79,33 @@ body.is-locked { overflow: hidden; }
   color: var(--ink);
 }
 
+/* One focus language for every interactive surface. Keyboard users get the
+   same ring on links, chips, menu items, palette rows and the timeline; mouse
+   users never see it. `-inset` variants keep the ring inside cards that clip. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
   border-radius: 6px;
+}
+
+:where(a, button, [role="button"], summary, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+:where(.nav-link, .chip, .segmented button, .palette-item, .account-menu a, .account-menu button, .timeline-link):focus-visible {
+  outline-offset: -2px;
+}
+
+/* Safari paints a default ring on :focus for buttons it considers focusable. */
+:where(button, [role="button"]):focus:not(:focus-visible) {
+  outline: none;
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid Highlight;
+  }
 }
 
 h1, h2, h3, h4, p, figure, ol, ul { margin: 0; }
@@ -120,7 +143,9 @@ table { border-collapse: collapse; width: 100%; }
 }
 .icon-xs { width: 13px; height: 13px; stroke-width: 2; }
 
-.sr-only {
+.sr-only,
+.sr-value,
+.sr-table {
   position: absolute;
   width: 1px; height: 1px;
   padding: 0; margin: -1px;

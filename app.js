@@ -571,11 +571,30 @@ function sparkSvg(values, className, width = 100, height = 26, pathClass = "") {
 
 function formatCompact(value) {
   if (!value) return "0";
-  return fmtCompact.format(value).replace(".0K", "K").replace(".0M", "M");
+  // Intl's compact notation already renders 1000 as "1K" and 1204 as "1.2K";
+  // the old `.replace(".0K", "K")` only worked for en-US.
+  return fmtCompact.format(value);
 }
 
 function formatDelta(value) {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+/**
+ * Counters rewrite their text on every frame, which is unusable for a screen
+ * reader (and a live region would narrate every frame). So the animated node is
+ * hidden from AT and its final value sits in a static, clipped mirror.
+ */
+function setAccessibleValue(element, text) {
+  if (!element) return;
+  element.setAttribute("aria-hidden", "true");
+  let mirror = element.nextElementSibling;
+  if (!mirror || !mirror.classList.contains("sr-value")) {
+    mirror = document.createElement("span");
+    mirror.className = "sr-value";
+    element.insertAdjacentElement("afterend", mirror);
+  }
+  if (mirror.textContent !== text) mirror.textContent = text;
 }
 
 function animateNumber(element, target, options = {}) {
@@ -594,6 +613,7 @@ function animateNumber(element, target, options = {}) {
     return fmtInt.format(Math.round(value));
   };
   const final = `${prefix}${format(target)}${suffix}`;
+  setAccessibleValue(element, final);
   if (reduced()) {
     element.textContent = final;
     return;
@@ -1251,6 +1271,22 @@ function renderStreamChart(animate = true) {
   if (description) {
     const granularity = state.range === "90D" ? "Weekly streams" : "Daily streams";
     description.textContent = `${granularity} for the ${data.config.label}. The current period is trending ${data.delta} percent above the previous period.`;
+  }
+
+  const tableBody = $("#chartData tbody");
+  const tableCaption = $("#chartData caption");
+  if (tableBody && tableCaption) {
+    tableCaption.textContent = `Streams for the ${data.config.label} (${state.range === "90D" ? "weekly" : "daily"} values)`;
+    tableBody.replaceChildren(...data.dates.map((date, index) => {
+      const row = document.createElement("tr");
+      [shortDate.format(date), fmtInt.format(data.current[index]), fmtInt.format(data.previous[index])].forEach((value, column) => {
+        const cell = document.createElement(column === 0 ? "th" : "td");
+        if (column === 0) cell.scope = "row";
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+      return row;
+    }));
   }
 
   if (animate) {
@@ -2187,6 +2223,8 @@ function setRoute(route, initial = false) {
   const crumb = $("#crumbCurrent");
   if (crumb) crumb.textContent = ROUTES[route].crumb;
   document.title = `${ROUTES[route].title} — Timbre`;
+  const announcement = $("#routeAnnouncement");
+  if (announcement && !initial) announcement.textContent = `${ROUTES[route].title} page`;
 
   const dialog = $("#trackDialog");
   if (dialog && dialog.open) dialog.close();
@@ -2731,14 +2769,13 @@ function initPalette() {
    -------------------------------------------------------------------------- */
 
 function reportSummary() {
+  const topTrack = TRACKS.reduce((best, track) => !best || track.streams > best.streams ? track : best, null);
+  const topCity = CITIES.reduce((best, city) => !best || city.listeners > best.listeners ? city : best, null);
   return [
-    "Timbre — Mira Vale · last 30 days",
-    "Streams: 2,847,193 (+18.4%)",
-    "Monthly listeners: 612,408 (+9.2%)",
-    "Saves: 84,211 (+24.1%)",
-    "Revenue: $18,420 (+12.8%)",
-    "Top track: Hollow Bloom — 1,204,880 streams",
-    "Top city: London — 82.4K listeners",
+    "Timbre — Mira Vale · last 30 days (demo data)",
+    ...METRICS.map((metric) => `${metric.label}: ${metric.prefix || ""}${fmtInt.format(metric.value)} (${formatDelta(metric.delta)})`),
+    ...(topTrack ? [`Top track: ${topTrack.name} — ${fmtInt.format(topTrack.streams)} streams`] : []),
+    ...(topCity ? [`Top city: ${topCity.name} — ${formatCompact(topCity.listeners)} listeners`] : []),
   ].join("\n");
 }
 
@@ -2759,10 +2796,7 @@ async function shareReport(track) {
 function exportCsv() {
   const rows = [
     ["Metric", "Value", "Change"],
-    ["Streams", "2,847,193", "+18.4%"],
-    ["Monthly listeners", "612,408", "+9.2%"],
-    ["Saves", "84,211", "+24.1%"],
-    ["Revenue", "$18,420", "+12.8%"],
+    ...METRICS.map((metric) => [metric.label, `${metric.prefix || ""}${fmtInt.format(metric.value)}`, formatDelta(metric.delta)]),
     [],
     ["Track", "Streams", "Share", "30d change"],
     ...TRACKS.map((track) => [track.name, String(track.streams), `${track.share}%`, formatDelta(track.delta)]),
