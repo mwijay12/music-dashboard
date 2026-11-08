@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Timbre Studio — PC, VPS, Vercel: kazi moja, vifaa vitatu</title>
+<style>
+  :root{
+    --bg:#0b0f10; --panel:#121a1c; --panel2:#162124; --line:#223134;
+    --text:#e8f1f0; --muted:#93a6a6; --accent:#5eead4; --accent2:#a3e635;
+    --warn:#fbbf24; --bad:#f87171; --pc:#60a5fa; --vps:#c084fc;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:40px 22px 90px}
+  h1{font-size:30px;line-height:1.2;margin:0 0 8px;letter-spacing:-.02em}
+  h2{font-size:19px;margin:44px 0 14px;letter-spacing:-.01em}
+  h2 .n{color:var(--accent);font-variant-numeric:tabular-nums;margin-right:8px}
+  h3{font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:22px 0 8px}
+  p{margin:0 0 12px;color:#d3e2e0}
+  .lede{color:var(--muted);max-width:74ch;font-size:16px}
+  code{background:#0e1618;border:1px solid var(--line);padding:1px 6px;border-radius:5px;font-size:13px;color:#bff5ea}
+  .grid{display:grid;gap:14px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:860px){.g3,.g2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .card h4{margin:0 0 6px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .dot{width:9px;height:9px;border-radius:99px;display:inline-block}
+  .pc{background:var(--pc)} .vps{background:var(--vps)} .vc{background:var(--accent)}
+  .cloud{background:var(--warn)}
+  .tag{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:2px 8px;margin:0 6px 6px 0}
+  .spec{font-size:13px;color:var(--muted);margin-top:4px}
+  ul{margin:8px 0 0;padding-left:18px;color:#d3e2e0}
+  li{margin:5px 0}
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  td:first-child{white-space:nowrap;color:#eaf5f3}
+  .yes{color:var(--accent2)} .no{color:var(--bad)} .maybe{color:var(--warn)}
+  /* flow diagram */
+  .flow{display:grid;gap:10px;grid-template-columns:repeat(4,1fr);margin-top:16px}
+  @media(max-width:860px){.flow{grid-template-columns:1fr 1fr}}
+  .node{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+  .node b{display:block;font-size:13px;margin-bottom:3px}
+  .node span{font-size:12px;color:var(--muted)}
+  .node:after{content:"→";position:absolute;right:-13px;top:50%;transform:translateY(-50%);
+    color:var(--accent);font-size:16px;font-weight:700}
+  .node:last-child:after{display:none}
+  .phase{display:grid;grid-template-columns:64px 1fr;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+  .phase .num{font-size:24px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+  .phase h4{margin:0 0 4px;font-size:15px}
+  .phase .proof{margin-top:6px;font-size:13px;color:var(--muted)}
+  .phase .proof b{color:var(--accent2);font-weight:600}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted);margin-right:6px}
+  .note{border-left:3px solid var(--warn);background:#1a1710;padding:12px 14px;border-radius:0 10px 10px 0;color:#f3e6c8;font-size:14px}
+  .ok{border-left-color:var(--accent2);background:#101a12;color:#e2f6d9}
+  footer{margin-top:60px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
+  .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:#0e1618;
+    border:1px solid var(--line);border-radius:6px;padding:2px 6px;color:#bff5ea}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Timbre Studio — vifaa vitatu, kazi moja</h1>
+  <p class="lede">
+    Plan ya series: PC yako (Ryzen 5 · 16 GB) inakuwa <b>mikono</b>, n8n kwenye VPS inakuwa <b>akili na ratiba</b>,
+    Vercel inakuwa <b>dirisha</b> la kuona kila kitu. Muziki ndio niche ya kwanza; magari (restoration) yanapanda
+    juu ya reli zile zile baadaye bila kubadilisha kitu cha msingi.
+  </p>
+
+  <h2><span class="n">1</span>Nani anafanya nini</h2>
+  <div class="grid g3">
+    <div class="card">
+      <h4><span class="dot pc"></span>PC yako — mikono</h4>
+      <div class="spec">Ryzen 5 · 16 GB RAM · iGPU 490 MB · Windows</div>
+      <ul>
+        <li>ffmpeg: kukata, kuunganisha, kupima sauti, 1080p render</li>
+        <li>Kupanga thumbnails, kutengeneza mafaili ya kupost</li>
+        <li>Hifadhi ya nyimbo/video zote (archive)</li>
+        <li>Inasubiri kazi kwa <b>kupiga simu nje</b>, haifungui mlango</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4><span class="dot vps"></span>VPS + n8n — akili</h4>
+      <div class="spec">Ipo tayari · haina GPU lakini haihitaji</div>
+      <ul>
+        <li>Ratiba: kila siku saa 06:00 → “tafuta keywords mpya”</li>
+        <li>Queue ya kazi + retries + log ya kila jaribio</li>
+        <li>Kitufe cha idhini (Telegram): <i>“Post hii?”</i> kabla ya upload</li>
+        <li>YouTube node: upload + <code>publishAt</code> (kupanga saa)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4><span class="dot vc"></span>Vercel — dirisha</h4>
+      <div class="spec">Ipo tayari (timbre-puce.vercel.app)</div>
+      <ul>
+        <li>Dashboard: plan, queue, kilichopost, kilichofanya kazi</li>
+        <li>Research ya keyless (autocomplete + RSS)</li>
+        <li>PDF ya wiki kwa sponsor / media team</li>
+        <li>Haihusiki na kazi nzito — inaonyesha tu</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="n">2</span>Mtiririko wa kazi (siku moja kamili)</h2>
+  <div class="flow">
+    <div class="node"><b>1 · Research</b><span>Vercel/n8n: autocomplete + RSS → keywords, saa bora</span></div>
+    <div class="node"><b>2 · Plan</b><span>n8n: prompt + title + slot → kazi 3 za wiki</span></div>
+    <div class="node"><b>3 · Produce</b><span>PC: render video + thumbnail, rudisha faili</span></div>
+    <div class="node"><b>4 · Approve</b><span>Telegram: “Post?” → ndio/hapana</span></div>
+  </div>
+  <div class="flow" style="margin-top:10px">
+    <div class="node"><b>5 · Upload</b><span>n8n YouTube node: private + <code>publishAt</code> = saa uliyochagua</span></div>
+    <div class="node"><b>6 · Sync</b><span>kila siku: views/watch time → data/studio/videos.json</span></div>
+    <div class="node"><b>7 · Learn</b><span>title ipi ilishinda? → badilisha formula</span></div>
+    <div class="node"><b>8 · Report</b><span>PDF ya Jumatatu + uamuzi mmoja wa wiki</span></div>
+  </div>
+
+  <h2><span class="n">3</span>PC yako inaweza nini kweli (bila kujidanganya)</h2>
+  <table>
+    <tr><th>Kazi</th><th>Hali</th><th>Sababu / kipimo</th></tr>
+    <tr><td>ffmpeg render 1080p</td><td class="yes">Ndio</td><td>x264 veryfast kwenye Ryzen 5 ≈ real time: wimbo wa dakika 5 → dakika ~5–7</td></tr>
+    <tr><td>Kuunganisha mix ya saa 1</td><td class="yes">Ndio</td><td><code>-c copy</code> ni dakika 1–2, hakuna re-encode</td></tr>
+    <tr><td>Thumbnails (picha + maandishi)</td><td class="yes">Ndio</td><td>ffmpeg drawtext, sekunde chache</td></tr>
+    <tr><td>Kuhifadhi video zote + backup</td><td class="yes">Ndio</td><td>16 GB RAM haihusiki; diski ndio kipimo</td></tr>
+    <tr><td>Local AI video (SVD / AnimateDiff)</td><td class="no">Hapana</td><td>iGPU 490 MB = hakuna VRAM; CPU pekee ni saa kwa sekunde 4</td></tr>
+    <tr><td>Local image gen (SDXL)</td><td class="no">Hapana</td><td>RAM 16 GB inatosha kwa SD1.5 tu, spidi ya dakika 3/picha; si ya production</td></tr>
+    <tr><td>4K render</td><td class="maybe">Inawezekana, lakini</td><td>mara 4 ya muda; YouTube haihitaji 4K kwa niche hii</td></tr>
+    <tr><td>Kutengeneza muziki</td><td class="cloud">Cloud</td><td>Suno Pro ~$10/mwezi — PC haitengenezi muziki, <b>inaikusanya</b></td></tr>
+  </table>
+  <div class="note" style="margin-top:14px">
+    <b>Uamuzi:</b> PC haitafanya AI generation. Inafanya assembly — ambayo ni 80% ya muda wa kazi ya kila siku.
+    Generation inabaki cloud (Suno) kwa sababu ndio quality na ndio legal (Pro = commercial rights).
+  </div>
+
+  <h2><span class="n">4</span>Usalama: PC haifungui mlango kamwe</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h4>Jinsi inavyofanya kazi</h4>
+      <ul>
+        <li>Worker inauliza n8n kila sekunde 30: <i>“kazi?”</i></li>
+        <li>n8n inajibu kazi au <code>204</code> (hakuna)</li>
+        <li>PC inafanya kazi, inarudisha matokeo</li>
+        <li>Token moja <code>x-timbre-token</code> kila upande</li>
+      </ul>
+      <p class="spec">Hakuna port forwarding, hakuna TLS cert ya Windows, hakuna IP ya nyumbani inayojulikana.</p>
+    </div>
+    <div class="card">
+      <h4>Kama kitu kimezimwa</h4>
+      <ul>
+        <li><b>PC imelala:</b> kazi zinasubiri queue — hakuna kitu kinavunjika</li>
+        <li><b>VPS imezimwa:</b> hakuna kupost; PC inarudia jaribio</li>
+        <li><b>Vercel imezimwa:</b> dashboard haionekani; pipeline inaendelea</li>
+        <li><b>YouTube key imeisha quota:</b> upload inasubiri siku inayofuata (1,600 ya 10,000)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="n">5</span>Series — kila phase ina kipimo cha “imekamilika”</h2>
+
+  <div class="phase">
+    <div class="num">0</div>
+    <div>
+      <h4>Msingi — leo, dakika 20</h4>
+      <p>Install <code>ffmpeg</code> kwenye PC. Endesha <code class="kbd">node worker/agent.mjs --self-test</code>.
+      Weka <code>studio/research.json</code> na seeds zako + channel 5 za washindani.</p>
+      <div class="proof"><b>Imekamilika kama:</b> self-test inaonyesha ✓ ffmpeg na ✓ ffprobe.</div>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="num">1</div>
+    <div>
+      <h4>Handshake — PC inajibu n8n</h4>
+      <p>Workflow moja n8n: <span class="pill">Webhook</span> → <span class="pill">IF token</span> → <span class="pill">Respond: job “echo”</span>.
+      Worker inaendesha <code class="kbd">--once</code> na inarudisha jina la PC + RAM + node version.</p>
+      <div class="proof"><b>Imekamilika kama:</b> n8n inaonyesha execution yenye <code>host</code>, <code>memoryGb: 16</code>.</div>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="num">2</div>
+    <div>
+      <h4>Kazi halisi — render ya kwanza</h4>
+      <p>Weka mp3 + picha kwenye folda. n8n inatuma job <code>render</code>; PC inarudisha mp4 + ukubwa wa faili.
+      Kisha job <code>concat</code> kwa mix ya dakika 60.</p>
+      <div class="proof"><b>Imekamilika kama:</b> mp4 ya dakika 5 iko kwenye diski, <code>ffprobe</code> inaonyesha h264 + aac.</div>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="num">3</div>
+    <div>
+      <h4>Idhini + upload + kupanga saa</h4>
+      <p>Telegram inauliza; n8n YouTube node ina-upload <code>private</code> na <code>publishAt</code> = slot
+      iliyopendekezwa na research (mfano Ijumaa 18:00 EAT). AI disclosure toggle = ON.</p>
+      <div class="proof"><b>Imekamilika kama:</b> video inaonekana YouTube Studio ikiwa “Scheduled”, sio “Public”.</div>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="num">4</div>
+    <div>
+      <h4>Kujifunza — data inarudi</h4>
+      <p>Sync ya kila siku: views, watch time, title ipi ilishinda. Report ya Jumatatu inatoa uamuzi <b>mmoja</b>.</p>
+      <div class="proof"><b>Imekamilika kama:</b> PDF ina ukurasa wa channel: post 3, views, slot bora, na plan ya wiki ijayo.</div>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="num">5</div>
+    <div>
+      <h4>Niche ya pili — magari, reli zile zile</h4>
+      <p>Badilisha pack pekee (<code>studio/prompt-pack.json</code> → pack ya restoration): same queue, same PC,
+      same approval. Kinachobadilika ni prompt na thumbnail template, sio mfumo.</p>
+      <div class="proof"><b>Imekamilika kama:</b> video ya gari inapita pipeline ile ile bila mstari mmoja wa code mpya.</div>
+    </div>
+  </div>
+
+  <h2><span class="n">6</span>Gharama halisi</h2>
+  <table>
+    <tr><th>Kitu</th><th>Bei</th><th>Lazima?</th></tr>
+    <tr><td>PC yako</td><td>$0 (ipo)</td><td>Ndio — assembly</td></tr>
+    <tr><td>VPS + n8n</td><td>$0 zaidi (ipo tayari)</td><td>Ndio — ratiba</td></tr>
+    <tr><td>Vercel</td><td>$0 (Hobby)</td><td>Ndio — dashboard</td></tr>
+    <tr><td>ffmpeg</td><td>$0</td><td>Ndio</td></tr>
+    <tr><td>Suno Pro</td><td>~$10/mwezi</td><td>Ndio kwa muziki wa kibiashara</td></tr>
+    <tr><td>YouTube Data API</td><td>$0 (quota 10,000/siku)</td><td>Ndio — upload + trending</td></tr>
+    <tr><td>Tailscale</td><td>$0</td><td>Hapana — haihitajiki kwa polling</td></tr>
+  </table>
+
+  <h2><span class="n">7</span>Vitu vitatu ninavyohitaji kutoka kwako</h2>
+  <div class="grid g3">
+    <div class="card"><h4>1 · ffmpeg</h4><p class="spec">Windows: <code>winget install Gyan.FFmpeg</code> kisha fungua terminal mpya. Ndio tu.</p></div>
+    <div class="card"><h4>2 · Webhook ya n8n</h4><p class="spec">URL ya webhook + token utakayotengeneza. Nitaipokea kama env, sio kwenye chat.</p></div>
+    <div class="card"><h4>3 · Channel verified</h4><p class="spec">Verify kwa simu — la sivyo video zaidi ya dakika 15 hazipandi (mix ya saa 1 itagoma).</p></div>
+  </div>
+
+  <div class="note ok" style="margin-top:26px">
+    <b>Kilichojengwa tayari kwenye branch hii:</b> <code>worker/agent.mjs</code> (handlers: echo, probe, render, concat;
+    outbound-only; token; argv-safe) + majaribio 9 yanayopita bila ffmpeg na bila network.
+    Kinachofuata: workflow ya n8n ya phase 1 na envelope ya job ya phase 2.
+  </div>
+
+  <footer>
+    Timbre Studio · branch <code>arena/f84017eb-music-dashboard</code> · 2026-11-08 ·
+    Nyaraka ndefu: <code>docs/STUDIO-PLAN.md</code> (niche, siku 30, pesa) · Ukurasa huu ni wa “nani anafanya nini”.
+  </footer>
+</div>
+</body>
+</html>

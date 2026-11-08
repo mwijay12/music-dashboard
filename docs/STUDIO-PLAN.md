@@ -113,7 +113,10 @@ If the channel never monetises, items 1 and 2 still pay. That is the whole reaso
 
 ## 8. What to build next in code (priority order)
 
-1. **Upload + schedule API** (`api/studio/publish`) — OAuth already in place; `videos.insert` with `publishAt`, plus a queue file so a failed upload resumes. This is the piece that makes “manage my posting” real.
+> **Where the machines fit:** `docs/STUDIO-ARCHITECTURE.html` (open it in a browser — it is a page, not a document) assigns the roles: the PC assembles, n8n on the existing VPS schedules and uploads, Vercel displays. §0–§5 of that page is the build order; this section is the code side of it.
+
+0. **PC worker — built on this branch.** `worker/agent.mjs`: polls n8n outbound-only (no open port), allowlisted handlers (`echo`, `probe`, `render`, `concat`), argv-safe spawn, reports failures too. 9 tests, no ffmpeg required.
+1. **Upload + schedule** — prefer n8n's YouTube node (OAuth + `videos.insert` + `publishAt`) over hand-rolled code; add `api/studio/publish` only if the dashboard must trigger uploads directly.
 2. **Daily sync** — one cron: `videos.list` for your own uploads (stats + status), write `data/studio/videos.json`, so the dashboard shows planned vs published vs performed.
 3. **Prompt → video kit** — for each pack entry, generate the title, description, tags, and a thumbnail text file; one button, no typing.
 4. **Research v2** — trending-by-category (`chart=mostPopular`, 1 unit) and “views/day” ranking of competitor uploads, so the report says “their Friday uploads get 3× their Tuesday ones” instead of just counting.

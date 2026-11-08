@@ -16,7 +16,9 @@
     "digest": "tsx pipeline/src/digest.ts",
     "report": "node scripts/render-report.mjs",
     "inbox": "tsx pipeline/src/inbox.ts",
-    "studio:research": "tsx pipeline/src/studio/research-cli.ts"
+    "studio:research": "tsx pipeline/src/studio/research-cli.ts",
+    "worker": "node worker/agent.mjs",
+    "test:worker": "node --test worker/*.test.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
