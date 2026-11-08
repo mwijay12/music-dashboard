@@ -132,7 +132,9 @@ Measured expectations (steady state, no build tooling on the box):
 
 Approx cost: EC2 ~$25–30/mo, gp3 30 GB ~$2.5/mo, backups ~$1. Vercel stays free-tier for the dashboard.
 
-Suggested compose shape (phase 2):
+A ready-to-run bundle lives in **`deploy/ec2/`**: `install.sh` (swap, Node 22, `timbre` user, checkout, `npm ci`, systemd units, staged ufw rules), `timbre-api.service`, `timbre-inbox.timer` (mailbox poll every 15 min), `timbre-backup.timer` (nightly archive of `data/`) and `env.example`. See `deploy/ec2/README.md` for the nginx/TLS step and the verification checklist.
+
+Suggested compose shape (only if you later want containers):
 
 ```yaml
 services:
@@ -190,7 +192,7 @@ Code is done (`api/auth/google.js`, `login.html`, `api/config`). To switch it on
 | Phase | Scope | Effort | Depends on |
 | --- | --- | --- | --- |
 | **0 — done** | Vector PDF reports, Audiomack digest parser + tests, digest PDF variant, `/sources` entry point | shipped | — |
-| **1 — wire the accounts** | Google OAuth live; cron the IMAP poller (`npm run inbox`, **built**); weekly cron renders the digest PDF | ~1 day | client secret, mailbox app password |
+| **1 — wire the accounts** | Google sign-in live (**done**: `GOOGLE_CLIENT_ID` set, `/api/config` reports configured); systemd timer runs the IMAP poller on EC2 (`deploy/ec2/`, **built**) | ~1 day | mailbox app password, EC2 instance |
 | **2 — history + API** | Postgres schema (§6), worker polls Audiomack Data API daily, `/api/report` reads DB, trend charts replace bar panels | 3–5 days | Audiomack app approval |
 | **3 — second platform** | Spotify for Artists CSV upload (parse + map) or YouTube Analytics OAuth; PDF gains a platform comparison page | 3–4 days | S4A export / Google scopes |
 | **4 — delivery** | Scheduled email with PDF attached, signed links, per-platform variants, alert when a track passes a milestone | 2 days | phase 2 |
