@@ -1326,9 +1326,18 @@ function initChartHover() {
     tip.style.top = `${Math.max(y, 54)}px`;
   };
 
+  let touchHideTimer = 0;
   wrap.addEventListener("pointermove", move);
   wrap.addEventListener("pointerleave", hideChartHover);
   wrap.addEventListener("pointercancel", hideChartHover);
+
+  /* Touch has no hover: a tap shows the tooltip, then it fades on its own. */
+  wrap.addEventListener("pointerdown", (event) => {
+    move(event);
+    if (event.pointerType !== "touch") return;
+    window.clearTimeout(touchHideTimer);
+    touchHideTimer = window.setTimeout(hideChartHover, 2600);
+  });
 }
 
 function initRange() {
@@ -1471,10 +1480,19 @@ function renderHeatmap() {
     tip.style.top = `${Math.max(cellRect.top - figureRect.top, 24)}px`;
   };
 
+  let touchHideTimer = 0;
   grid.addEventListener("pointerover", show);
   grid.addEventListener("pointermove", show);
   grid.addEventListener("pointerleave", () => {
     tip.hidden = true;
+  });
+  grid.addEventListener("pointerdown", (event) => {
+    show(event);
+    if (event.pointerType !== "touch") return;
+    window.clearTimeout(touchHideTimer);
+    touchHideTimer = window.setTimeout(() => {
+      tip.hidden = true;
+    }, 2600);
   });
 }
 
@@ -2013,27 +2031,60 @@ function renderPublicSignals(snapshot) {
   card.style.transform = "none";
 }
 
+function isValidSnapshot(snapshot) {
+  return Boolean(
+    snapshot &&
+      snapshot.schemaVersion === 1 &&
+      Array.isArray(snapshot.artists) &&
+      snapshot.artists.length
+  );
+}
+
+function setDataMode(mode, snapshot) {
+  const live = mode === "live";
+  const pill = $("#dataPill");
+  const label = $("#dataPillLabel");
+  if (pill) {
+    pill.dataset.mode = live ? "live" : "demo";
+    pill.title = live
+      ? `Public snapshot generated ${new Date(snapshot.generatedAt).toLocaleString()} — public metadata only, not private streaming totals`
+      : "Demo dataset — numbers are illustrative until the ingest pipeline writes data/live.json";
+  }
+  if (label) label.textContent = live ? "Live data" : "Demo data";
+  document.documentElement.dataset.dataMode = live ? "live" : "demo";
+}
+
+/* Prefer the server route (which can proxy a hosted snapshot); fall back to the
+   static file so the dashboard also works on a plain static host. */
+async function fetchSnapshot(signal) {
+  const endpoints = ["api/snapshot", "data/live.json"];
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, { cache: "no-store", signal });
+      if (!response.ok) continue;
+      const snapshot = await response.json();
+      if (isValidSnapshot(snapshot)) return snapshot;
+    } catch {
+      /* Try the next endpoint. */
+    }
+  }
+  return null;
+}
+
 async function loadPublicSignals() {
   if (publicSignalsLoaded) return;
+  setDataMode("demo");
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), 3500);
   try {
-    const response = await fetch("data/live.json", { cache: "no-store", signal: controller.signal });
-    if (!response.ok) return;
-    const snapshot = await response.json();
-    if (
-      !snapshot ||
-      snapshot.schemaVersion !== 1 ||
-      !Array.isArray(snapshot.artists) ||
-      !snapshot.artists.length
-    ) {
-      return;
-    }
+    const snapshot = await fetchSnapshot(controller.signal);
+    if (!snapshot) return;
 
     publicSignalsLoaded = true;
     const self = snapshot.artists.find((artist) => artist.role === "self") || snapshot.artists[0];
     if (self) hydrateSourceAccount(self);
     renderPublicSignals(snapshot);
+    setDataMode("live", snapshot);
     document.documentElement.dataset.publicSignals = "live";
     window.dispatchEvent(new CustomEvent("timbre:public-data", { detail: snapshot }));
   } catch {
@@ -2339,7 +2390,12 @@ async function loadAccount() {
   try {
     const response = await fetch("/api/me", { cache: "no-store" });
     if (!response.ok) return;
-    applyAccount(await response.json());
+    const data = await response.json();
+    applyAccount(data);
+    if (data?.authRequired && !data.authenticated) {
+      const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(`/login.html?next=${encodeURIComponent(here)}`);
+    }
   } catch {
     /* Static-only servers do not expose account state; keep demo defaults. */
   }

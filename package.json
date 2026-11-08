@@ -10,7 +10,8 @@
     "start": "node server/index.mjs",
     "dev": "node server/index.mjs",
     "typecheck": "tsc --noEmit && tsc -p pipeline/tsconfig.json --noEmit",
-    "ingest": "tsx pipeline/src/ingest.ts"
+    "ingest": "tsx pipeline/src/ingest.ts",
+    "build:vercel": "node scripts/build-static.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

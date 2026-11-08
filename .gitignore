@@ -12,3 +12,6 @@ data/.session-secret
 Thumbs.db
 .vscode/
 .idea/
+
+# generated static deployment payload
+public/

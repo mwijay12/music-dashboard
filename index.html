@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script>document.documentElement.classList.add("js");</script>
+  <script src="boot.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="globe-dist/globe-island.css">
 </head>
@@ -266,6 +266,10 @@
             <svg class="icon crumbs-sep" aria-hidden="true"><use href="#i-chevron-right"/></svg>
             <strong id="crumbCurrent">Overview</strong>
           </nav>
+          <span class="data-pill" id="dataPill" data-mode="demo" title="Demo dataset — design and numbers are illustrative">
+            <i aria-hidden="true"></i>
+            <span id="dataPillLabel">Demo data</span>
+          </span>
         </div>
         <div class="topbar-right">
           <button class="icon-btn motion-toggle" type="button" data-motion-toggle aria-pressed="true" aria-label="Pause animations" title="Animations on — click to pause">

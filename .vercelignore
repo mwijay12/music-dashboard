@@ -1,0 +1,8 @@
+node_modules
+.git
+.vercel
+*.log
+pipeline/artists.json
+.env
+.env.*
+!.env.example

@@ -21,6 +21,7 @@ const STATIC_FILES = new Set([
   "index.html",
   "login.html",
   "app.js",
+  "boot.js",
   "auth.js",
   "auth.css",
   "styles.css",
@@ -194,6 +195,33 @@ app.use(cookieParser(SESSION_SECRET));
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, authRequired: AUTH_REQUIRED, googleConfigured: Boolean(GOOGLE_CLIENT_ID) });
+});
+
+app.get("/api/snapshot", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const remote = process.env.LIVE_SNAPSHOT_URL?.trim();
+
+  if (!remote) {
+    try {
+      const raw = await fs.readFile(path.join(ROOT, "data", "live.json"), "utf8");
+      return res.type("application/json").send(raw);
+    } catch {
+      return res.status(404).json({ error: "No snapshot has been generated yet." });
+    }
+  }
+
+  try {
+    const response = await fetch(remote, {
+      signal: AbortSignal.timeout(5000),
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) {
+      return res.status(502).json({ error: `Snapshot source responded ${response.status}.` });
+    }
+    return res.type("application/json").send(await response.text());
+  } catch {
+    return res.status(502).json({ error: "Snapshot source unreachable." });
+  }
 });
 
 app.get("/api/config", (req, res) => {

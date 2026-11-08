@@ -60,6 +60,8 @@ export function Globe({
     };
 
     const initial = readSize();
+    /* Phones get a cheaper globe: half the samples and a lower pixel ratio. */
+    const compact = initial.width < 680;
     let width = initial.width;
     let height = initial.height;
     let phi = initialPhi;
@@ -76,12 +78,12 @@ export function Globe({
     const globe = createGlobe(canvas, {
       width,
       height,
-      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, compact ? 1.5 : 2),
       phi,
       theta,
       dark: 0.72,
       diffuse: 1.35,
-      mapSamples: 18000,
+      mapSamples: compact ? 9000 : 18000,
       mapBrightness: 6.4,
       mapBaseBrightness: 0.06,
       baseColor: [0.19, 0.16, 0.13],
