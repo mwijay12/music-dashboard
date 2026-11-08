@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Overview — Timbre</title>
-  <meta name="description" content="Timbre is a motion-first artist intelligence dashboard for streams, listeners, saves, and revenue.">
+  <title>Studio — Timbre</title>
+  <meta name="description" content="Timbre Studio: plan content batches for YouTube and beyond.">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#f4f0e8">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%231d1a17'/%3E%3Cg fill='%23f6f1e8'%3E%3Crect x='8' y='14' width='3' height='10' rx='1.5'/%3E%3Crect x='14.5' y='9' width='3' height='15' rx='1.5'/%3E%3Crect x='21' y='12' width='3' height='12' rx='1.5'/%3E%3C/g%3E%3Ccircle cx='24.5' cy='9' r='2.2' fill='%23d96132'/%3E%3C/svg%3E">
@@ -174,7 +174,7 @@
 
   <aside class="sidebar" id="sidebar" aria-label="Primary">
     <div class="sidebar-top">
-      <a class="brand" href="#/overview" data-route-link="overview" aria-label="Timbre home">
+      <a class="brand" href="#/studio" data-route-link="studio" aria-label="Timbre Studio home">
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><b></b></span>
         <span class="brand-name">timbre<span>.</span></span>
       </a>
@@ -184,16 +184,20 @@
     </div>
 
     <div class="artist-card">
-      <span class="avatar avatar-lg" aria-hidden="true">MV</span>
+      <span class="avatar avatar-lg" aria-hidden="true">TS</span>
       <span class="artist-meta">
-        <strong>Mira Vale</strong>
-        <span>Independent artist</span>
+        <strong>Content studio</strong>
+        <span>Music &amp; stories</span>
       </span>
-      <span class="badge badge-pro">Pro</span>
+      <span class="badge badge-pro">Studio</span>
     </div>
 
     <nav class="nav" aria-label="Workspace">
       <p class="nav-label">Workspace</p>
+      <a class="nav-link" href="#/studio" data-route-link="studio">
+        <svg class="icon"><use href="#i-sparkle"/></svg><span>Studio</span><i class="nav-dot" aria-hidden="true"></i>
+      </a>
+      <p class="nav-label">Analytics · demo</p>
       <a class="nav-link" href="#/overview" data-route-link="overview">
         <svg class="icon"><use href="#i-grid"/></svg>
         <span>Overview</span>
@@ -229,14 +233,7 @@
     <div class="sidebar-spacer"></div>
 
     <div class="sidebar-foot">
-      <div class="sources">
-        <p class="nav-label">Sources</p>
-        <ul class="source-list">
-          <li><span class="source-dot"></span><span>Spotify</span><span class="source-status">Synced</span></li>
-          <li><span class="source-dot"></span><span>Apple Music</span><span class="source-status">Synced</span></li>
-          <li><span class="source-dot"></span><span>YouTube</span><span class="source-status">2m ago</span></li>
-        </ul>
-      </div>
+      <div class="studio-sidebar-note"><span>ONE ENGINE, TWO LANES</span><p>Music sasa. Car restoration baadaye.</p></div>
       <div class="profile">
         <button class="profile-account" id="sidebarAccount" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="accountMenu" aria-label="Open account menu">
           <span class="avatar" data-account-avatar aria-hidden="true">DM</span>
@@ -319,7 +316,37 @@
 
     <div id="routeAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
     <main id="main" class="main">
-      <section class="view" data-view="overview" aria-labelledby="overviewTitle">
+      <section class="view studio-view" data-view="studio" aria-labelledby="studioTitle">
+        <header class="studio-header" data-reveal>
+          <div><p class="eyebrow">YOUR CONTENT WORKSPACE <span class="sep">/</span> STUDIO 01</p>
+          <h1 class="display" id="studioTitle" tabindex="-1">Create ahead.<br><em>Stay consistent.</em></h1>
+          <p class="studio-lede">Panga content kwa batches, tengeneza kwenye PC yako, kisha ratibu uchapishaji kupitia n8n. Mfumo mmoja, nafasi ya mawazo mengi.</p>
+          <button type="button" id="studioPlanButton" class="btn btn-primary" data-magnetic>Plan a batch <svg class="icon btn-arrow"><use href="#i-arrow-right"/></svg></button></div>
+          <div class="studio-art" aria-hidden="true"><div class="studio-art-ring ring-one"></div><div class="studio-art-ring ring-two"></div><div class="studio-art-core"><span>YOUR</span><strong>creative<br>engine<span>.</span></strong><small>IDEA → CONTENT → AUDIENCE</small></div><span class="studio-art-label">MADE TO MOVE</span></div>
+        </header>
+        <div class="studio-intro" data-reveal><div><p class="kicker">THE BIG PICTURE</p><h2>From idea to upload.</h2></div><p>Wewe unaamua direction. Mfumo unasaidia kazi zirudiwe kwa mpangilio.</p></div>
+        <div class="studio-flow">
+          <article class="card studio-flow-card" data-reveal><span class="studio-step">01 / PLAN</span><h3>Dashboard</h3><p>Weka mawazo na tarehe unazolenga hapa. Hii ndiyo sehemu yako ya kuona na kupanga kazi.</p><span class="studio-tag">You are here</span></article>
+          <article class="card studio-flow-card" data-reveal><span class="studio-step">02 / ASSEMBLE</span><h3>Your PC</h3><p>Worker huchukua kazi kutoka n8n na kutumia FFmpeg kuandaa video. PC ikiwa off, kazi inasubiri.</p><span class="studio-tag">Worker built · setup needed</span></article>
+          <article class="card studio-flow-card" data-reveal><span class="studio-step">03 / PUBLISH</span><h3>n8n on VPS</h3><p>Inasimamia foleni, ratiba na majibu ya PC; baadaye ita-upload YouTube baada ya kuunganishwa.</p><span class="studio-tag">Workflow not connected yet</span></article>
+        </div>
+        <div class="studio-grid">
+          <section class="card studio-planner" id="studio-planner" data-reveal aria-labelledby="plannerTitle">
+            <div class="studio-section-head"><div><p class="kicker">YOUR NEXT MOVE</p><h2 id="plannerTitle">Batch planner</h2></div><span class="studio-tag">Saved on this browser</span></div>
+            <p class="studio-muted">Andika unachotaka kutengeneza. Hii ni plan ya hapa tu — haijatuma kazi kwa PC wala kupanga upload.</p>
+            <form id="studioForm" class="studio-form">
+              <label>Content idea<input name="title" required maxlength="120" placeholder="e.g. Late night Afro mix"></label>
+              <div class="studio-form-row"><label>Lane<select name="lane"><option value="Music / YouTube">Music / YouTube</option><option value="Car restoration">Car restoration · later</option></select></label><label>Target date <span>(optional)</span><input name="date" type="date"></label></div>
+              <label>Notes <span>(optional)</span><textarea name="notes" maxlength="500" rows="2" placeholder="Mood, assets, ideas for shorts…"></textarea></label>
+              <button class="btn btn-primary" type="submit">Save idea <svg class="icon btn-arrow"><use href="#i-arrow-right"/></svg></button>
+              <p id="studioMessage" class="studio-message" role="status"></p>
+            </form>
+          </section>
+          <section class="card studio-queue" data-reveal aria-labelledby="ideasTitle"><div class="studio-section-head"><div><p class="kicker">LOCAL DRAFTS</p><h2 id="ideasTitle">Your ideas</h2></div></div><p class="studio-muted">Drafts za browser hii tu; hazisync na haziposti zenyewe.</p><div id="studioIdeas" class="studio-ideas"></div></section>
+        </div>
+        <div class="studio-lanes" data-reveal><div><p class="kicker">TWO LANES, ONE ENGINE</p><h2>Built to grow with you.</h2></div><div class="studio-lane"><span>01</span><div><strong>AI music</strong><p>Music + visual → long-form &amp; Shorts → YouTube.</p></div><span class="studio-tag">First</span></div><div class="studio-lane"><span>02</span><div><strong>Car restoration</strong><p>Footage → episode, Shorts &amp; cost card.</p></div><span class="studio-tag">Later</span></div></div>
+      </section>
+      <section class="view" data-view="overview" aria-labelledby="overviewTitle" hidden>
         <header class="page-head">
           <div class="page-head-copy">
             <p class="eyebrow" data-reveal>
@@ -1046,6 +1073,7 @@
       <div class="palette-body" id="paletteBody">
         <p class="palette-label">Jump to</p>
         <div class="cmd-group">
+          <button class="cmd" type="button" data-route-command="studio"><span class="cmd-icon"><svg class="icon"><use href="#i-sparkle"/></svg></span><span class="cmd-label">Go to studio</span></button>
           <button class="cmd" type="button" data-route-command="overview">
             <span class="cmd-icon"><svg class="icon"><use href="#i-grid"/></svg></span>
             <span class="cmd-label">Go to overview</span>

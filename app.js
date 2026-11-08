@@ -91,6 +91,7 @@ const tooltipDate = new Intl.DateTimeFormat("en-US", { weekday: "short", month: 
 const longDate = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
 const ROUTES = {
+  studio: { title: "Studio", crumb: "Studio" },
   overview: { title: "Overview", crumb: "Overview" },
   streams: { title: "Streams", crumb: "Streams" },
   tracks: { title: "Tracks", crumb: "Tracks" },
@@ -463,7 +464,7 @@ const SETTINGS = [
 ];
 
 const state = {
-  route: "overview",
+  route: "studio",
   range: "30D",
   live: true,
   playing: true,
@@ -2140,13 +2141,72 @@ async function loadPublicSignals() {
   }
 }
 
+/* Local planning only. Nothing here creates an n8n job or schedules a post. */
+function initStudioPlanner() {
+  const form = $("#studioForm");
+  const list = $("#studioIdeas");
+  const message = $("#studioMessage");
+  if (!form || !list || !message) return;
+  const key = "timbre:studio-ideas:v1";
+  let ideas = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || "[]");
+    if (Array.isArray(saved)) ideas = saved.filter((item) => item && typeof item.title === "string");
+  } catch {
+    message.textContent = "Could not read saved drafts on this browser.";
+  }
+  function render() {
+    list.replaceChildren();
+    if (!ideas.length) {
+      const empty = document.createElement("p");
+      empty.className = "studio-empty";
+      empty.textContent = "Hakuna ideas bado. Anza na wazo moja hapo upande wa planner.";
+      list.append(empty);
+      return;
+    }
+    ideas.forEach((idea, index) => {
+      const item = document.createElement("article");
+      item.className = "studio-idea";
+      const title = document.createElement("strong");
+      title.textContent = idea.title;
+      const meta = document.createElement("p");
+      meta.textContent = `${idea.lane || "Music / YouTube"}${idea.date ? ` · Target: ${idea.date}` : ""} · Draft`;
+      item.append(title, meta);
+      if (idea.notes) { const notes = document.createElement("p"); notes.className = "studio-idea-notes"; notes.textContent = idea.notes; item.append(notes); }
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "studio-remove";
+      remove.textContent = "Remove";
+      remove.setAttribute("aria-label", `Remove ${idea.title}`);
+      remove.addEventListener("click", () => {
+        const next = ideas.filter((_, i) => i !== index);
+        try { localStorage.setItem(key, JSON.stringify(next)); ideas = next; render(); message.textContent = "Draft removed."; }
+        catch { message.textContent = "Could not save changes in this browser."; }
+      });
+      item.append(remove);
+      list.append(item);
+    });
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const title = String(data.get("title") || "").trim();
+    if (!title) { message.textContent = "Please enter a content idea."; return; }
+    const next = [{ title, lane: String(data.get("lane") || ""), date: String(data.get("date") || ""), notes: String(data.get("notes") || "").trim() }, ...ideas];
+    try { localStorage.setItem(key, JSON.stringify(next)); ideas = next; form.reset(); render(); message.textContent = "Draft saved on this browser — not scheduled or sent."; }
+    catch { message.textContent = "Could not save this draft. Check browser storage settings."; }
+  });
+  $("#studioPlanButton")?.addEventListener("click", () => { $("#studio-planner").scrollIntoView({ behavior: reduced() ? "auto" : "smooth" }); form.elements.title.focus({ preventScroll: true }); });
+  render();
+}
+
 /* --------------------------------------------------------------------------
    Router & chrome
    -------------------------------------------------------------------------- */
 
 function routeFromHash() {
   const value = window.location.hash.replace(/^#\/?/, "").split("?")[0];
-  return ROUTES[value] ? value : "overview";
+  return ROUTES[value] ? value : "studio";
 }
 
 function routeProgress() {
@@ -2200,13 +2260,14 @@ function enterView(route) {
 let routeTransitionId = 0;
 
 function setRoute(route, initial = false) {
-  if (!ROUTES[route]) route = "overview";
+  if (!ROUTES[route]) route = "studio";
   const view = $(`[data-view="${route}"]`);
   if (!view) return;
   const outgoing = $$("[data-view]").find((section) => !section.hidden && section !== view);
   const animateRoute = Boolean(!initial && outgoing && gsap && !reduced());
   const transitionId = ++routeTransitionId;
   state.route = route;
+  document.body.classList.toggle("is-studio", route === "studio");
 
   $$("[data-view]").forEach((section) => {
     section.hidden = animateRoute ? section !== outgoing : section !== view;
@@ -3026,6 +3087,7 @@ async function init() {
   renderWave();
   duplicateMarquee();
 
+  initStudioPlanner();
   initAccount();
   await loadPublicSignals();
 
@@ -3045,7 +3107,7 @@ async function init() {
   initScenes();
   setReducedMotion(reduced());
 
-  if (!window.location.hash) window.history.replaceState(null, "", "#/overview");
+  if (!window.location.hash) window.history.replaceState(null, "", "#/studio");
   setRoute(routeFromHash(), true);
 
   window.addEventListener("hashchange", () => setRoute(routeFromHash()));
