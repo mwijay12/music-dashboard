@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Timbre data backup
+
+[Timer]
+OnCalendar=*-*-* 03:20:00
+RandomizedDelaySec=15min
+Persistent=true
+Unit=timbre-backup.service
+
+[Install]
+WantedBy=timers.target

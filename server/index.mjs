@@ -7,6 +7,10 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import { OAuth2Client } from "google-auth-library";
 
+import { buildReportPdf, reportFileName } from "../serverless/report/pdf.mjs";
+import { resolveReportData } from "../serverless/report/data.mjs";
+import { resolveBenchmark } from "../serverless/benchmark/sources.mjs";
+
 const ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const PORT = Number(process.env.PORT || 8130);
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
@@ -21,6 +25,7 @@ const STATIC_FILES = new Set([
   "index.html",
   "login.html",
   "app.js",
+  "boot.js",
   "auth.js",
   "auth.css",
   "styles.css",
@@ -194,6 +199,100 @@ app.use(cookieParser(SESSION_SECRET));
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, authRequired: AUTH_REQUIRED, googleConfigured: Boolean(GOOGLE_CLIENT_ID) });
+});
+
+app.get("/api/snapshot", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const remote = process.env.LIVE_SNAPSHOT_URL?.trim();
+
+  if (!remote) {
+    try {
+      const raw = await fs.readFile(path.join(ROOT, "data", "live.json"), "utf8");
+      return res.type("application/json").send(raw);
+    } catch {
+      return res.status(404).json({ error: "No snapshot has been generated yet." });
+    }
+  }
+
+  try {
+    const response = await fetch(remote, {
+      signal: AbortSignal.timeout(5000),
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) {
+      return res.status(502).json({ error: `Snapshot source responded ${response.status}.` });
+    }
+    return res.type("application/json").send(await response.text());
+  } catch {
+    return res.status(502).json({ error: "Snapshot source unreachable." });
+  }
+});
+
+app.get("/api/report", async (req, res, next) => {
+  const source = String(req.query.source || "auto").toLowerCase();
+  const inline = ["1", "true", "yes"].includes(String(req.query.inline || "").toLowerCase());
+  if (!["auto", "demo", "digest"].includes(source)) {
+    return res.status(400).json({ error: "Unknown source. Use demo, digest or auto." });
+  }
+  try {
+    const data = await resolveReportData({ mode: source });
+    if (!data) {
+      return res.status(404).json({
+        error: "No Audiomack digest has been imported yet. Run `npm run digest -- --file <email.txt>`.",
+      });
+    }
+    const pdf = await buildReportPdf(data);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${reportFileName(data)}"`,
+      "Content-Length": pdf.length,
+      "Cache-Control": "no-store",
+      "X-Report-Mode": data.source || data.mode,
+    });
+    res.status(200).end(pdf);
+  } catch (error) {
+    next(error);
+  }
+});
+
+async function readDigestStore() {
+  try {
+    return JSON.parse(await fs.readFile(path.join(ROOT, "data", "audiomack-digest.json"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+app.get("/api/benchmark", async (req, res, next) => {
+  /* Public-source lookup for comparison: Spotify + YouTube, key-gated. */
+  res.set("Cache-Control", "no-store");
+  const artist = String(req.query.artist || req.query.q || "").trim();
+  if (!artist) return res.status(400).json({ error: "Pass ?artist=<name> to look up an artist." });
+  if (artist.length > 120) return res.status(400).json({ error: "Artist name is too long." });
+  try {
+    const digest = await readDigestStore();
+    return res.json(await resolveBenchmark({ artist, digest }));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/digest", async (req, res, next) => {
+  /* Public read of the imported digest so the Vercel deployment can pull it via
+     DIGEST_URL. Set DIGEST_TOKEN to require a bearer token. */
+  res.set("Cache-Control", "no-store");
+  const token = process.env.DIGEST_TOKEN?.trim();
+  if (token) {
+    const header = req.get("authorization") || "";
+    const provided = header.startsWith("Bearer ") ? header.slice(7).trim() : String(req.query.token || "");
+    if (provided !== token) return res.status(401).json({ error: "Digest token required." });
+  }
+  try {
+    const raw = await fs.readFile(path.join(ROOT, "data", "audiomack-digest.json"), "utf8");
+    return res.type("application/json").send(raw);
+  } catch {
+    return res.status(404).json({ error: "No digest imported yet." });
+  }
 });
 
 app.get("/api/config", (req, res) => {

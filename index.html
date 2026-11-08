@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script>document.documentElement.classList.add("js");</script>
+  <script src="boot.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="globe-dist/globe-island.css">
 </head>
@@ -266,6 +266,10 @@
             <svg class="icon crumbs-sep" aria-hidden="true"><use href="#i-chevron-right"/></svg>
             <strong id="crumbCurrent">Overview</strong>
           </nav>
+          <span class="data-pill" id="dataPill" data-mode="demo" title="Demo dataset — design and numbers are illustrative">
+            <i aria-hidden="true"></i>
+            <span id="dataPillLabel">Demo data</span>
+          </span>
         </div>
         <div class="topbar-right">
           <button class="icon-btn motion-toggle" type="button" data-motion-toggle aria-pressed="true" aria-label="Pause animations" title="Animations on — click to pause">
@@ -331,11 +335,19 @@
               <svg class="icon"><use href="#i-share"/></svg>
               Share report
             </button>
-            <button class="btn btn-primary" type="button" data-export data-magnetic>
+            <button class="btn btn-ghost" type="button" data-export>Export CSV</button>
+            <a
+              class="btn btn-primary"
+              href="/api/report?source=demo&inline=1"
+              target="_blank"
+              rel="noopener"
+              data-report-pdf
+              data-magnetic
+            >
               <svg class="icon"><use href="#i-download"/></svg>
-              Export CSV
+              <span data-report-label>PDF report</span>
               <svg class="icon btn-arrow"><use href="#i-arrow-right"/></svg>
-            </button>
+            </a>
           </div>
         </header>
 
@@ -932,7 +944,40 @@
           </aside>
         </div>
 
+        <p class="source-mode-note" id="sourceModeNote" data-mode="demo">
+          <span class="note-dot"></span>
+          Demo connections — the source cards below are illustrative until a platform is authorised.
+        </p>
+
         <div class="source-accounts" id="sourceAccounts"></div>
+
+        <article class="card digest-card" data-reveal>
+          <header class="card-head">
+            <div>
+              <p class="kicker">Imported data</p>
+              <h2>Audiomack weekly digest</h2>
+            </div>
+            <span class="badge badge-positive">Real account</span>
+          </header>
+          <p class="card-note">
+            Piano Sifa Afro Gospel Amapiano Hub — 103 plays in the seven days to 7 Nov, 750 lifetime plays across five
+            tracks. Parsed from the weekly email by <code>npm run digest</code>; the PDF below is built from that file.
+          </p>
+          <div class="digest-actions">
+            <a
+              class="btn btn-primary"
+              href="/api/report?source=digest&inline=1"
+              target="_blank"
+              rel="noopener"
+              data-report-pdf
+            >
+              <svg class="icon"><use href="#i-download"/></svg>
+              <span data-report-label>Digest PDF</span>
+            </a>
+            <a class="digest-link" href="/api/report?source=digest">Download instead</a>
+            <span class="digest-meta">data/audiomack-digest.json · 1 week stored</span>
+          </div>
+        </article>
 
         <article class="card public-signals" id="publicSignals" data-reveal hidden>
           <header class="card-head">
@@ -1027,6 +1072,14 @@
         </div>
         <p class="palette-label">Actions</p>
         <div class="cmd-group">
+          <button class="cmd" type="button" data-action="report-pdf">
+            <span class="cmd-icon"><svg class="icon"><use href="#i-download"/></svg></span>
+            <span class="cmd-label">Open PDF report</span>
+          </button>
+          <button class="cmd" type="button" data-action="report-digest">
+            <span class="cmd-icon"><svg class="icon"><use href="#i-download"/></svg></span>
+            <span class="cmd-label">Open Audiomack digest PDF</span>
+          </button>
           <button class="cmd" type="button" data-action="export">
             <span class="cmd-icon"><svg class="icon"><use href="#i-download"/></svg></span>
             <span class="cmd-label">Export report as CSV</span>

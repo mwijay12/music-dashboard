@@ -1,0 +1,15 @@
+[Unit]
+Description=Timbre — back up imported data
+
+[Service]
+Type=oneshot
+User=timbre
+Group=timbre
+WorkingDirectory=/opt/timbre
+ExecStart=/opt/timbre/deploy/ec2/backup.sh
+ReadWritePaths=/opt/timbre/data /var/backups/timbre
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true

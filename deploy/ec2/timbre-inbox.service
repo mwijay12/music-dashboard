@@ -1,0 +1,26 @@
+[Unit]
+Description=Timbre — pull Audiomack weekly digests from the mailbox
+Documentation=https://github.com/mwijay12/music-dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=timbre
+Group=timbre
+WorkingDirectory=/opt/timbre
+EnvironmentFile=/opt/timbre/.env
+Environment=NODE_ENV=production
+# Call tsx directly: npm would try to write its log cache into $HOME, which
+# ProtectHome blocks for a system service.
+ExecStart=/usr/bin/node /opt/timbre/node_modules/tsx/dist/cli.mjs pipeline/src/inbox.ts
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/timbre/data
+MemoryMax=256M

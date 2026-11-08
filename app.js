@@ -1326,9 +1326,18 @@ function initChartHover() {
     tip.style.top = `${Math.max(y, 54)}px`;
   };
 
+  let touchHideTimer = 0;
   wrap.addEventListener("pointermove", move);
   wrap.addEventListener("pointerleave", hideChartHover);
   wrap.addEventListener("pointercancel", hideChartHover);
+
+  /* Touch has no hover: a tap shows the tooltip, then it fades on its own. */
+  wrap.addEventListener("pointerdown", (event) => {
+    move(event);
+    if (event.pointerType !== "touch") return;
+    window.clearTimeout(touchHideTimer);
+    touchHideTimer = window.setTimeout(hideChartHover, 2600);
+  });
 }
 
 function initRange() {
@@ -1471,10 +1480,19 @@ function renderHeatmap() {
     tip.style.top = `${Math.max(cellRect.top - figureRect.top, 24)}px`;
   };
 
+  let touchHideTimer = 0;
   grid.addEventListener("pointerover", show);
   grid.addEventListener("pointermove", show);
   grid.addEventListener("pointerleave", () => {
     tip.hidden = true;
+  });
+  grid.addEventListener("pointerdown", (event) => {
+    show(event);
+    if (event.pointerType !== "touch") return;
+    window.clearTimeout(touchHideTimer);
+    touchHideTimer = window.setTimeout(() => {
+      tip.hidden = true;
+    }, 2600);
   });
 }
 
@@ -2013,27 +2031,70 @@ function renderPublicSignals(snapshot) {
   card.style.transform = "none";
 }
 
+function isValidSnapshot(snapshot) {
+  return Boolean(
+    snapshot &&
+      snapshot.schemaVersion === 1 &&
+      Array.isArray(snapshot.artists) &&
+      snapshot.artists.length
+  );
+}
+
+function setDataMode(mode, snapshot) {
+  const live = mode === "live";
+  const pill = $("#dataPill");
+  const label = $("#dataPillLabel");
+  if (pill) {
+    pill.dataset.mode = live ? "live" : "demo";
+    pill.title = live
+      ? `Public snapshot generated ${new Date(snapshot.generatedAt).toLocaleString()} — public metadata only, not private streaming totals`
+      : "Demo dataset — numbers are illustrative until the ingest pipeline writes data/live.json";
+  }
+  if (label) label.textContent = live ? "Live data" : "Demo data";
+  document.documentElement.dataset.dataMode = live ? "live" : "demo";
+
+  const note = $("#sourceModeNote");
+  if (note) {
+    note.dataset.mode = live ? "live" : "demo";
+    note.innerHTML = live
+      ? `<span class="note-dot"></span>Public snapshot generated ${escapeHtml(
+          new Date(snapshot.generatedAt).toLocaleString()
+        )} — followers, popularity and channel views are real. Streams, saves and geography still need artist-authorised access.`
+      : `<span class="note-dot"></span>Demo connections — the source cards below are illustrative until a platform is authorised.`;
+  }
+}
+
+/* Prefer the server route (which can proxy a hosted snapshot); fall back to the
+   static file so the dashboard also works on a plain static host. */
+async function fetchSnapshot(signal) {
+  const endpoints = ["api/snapshot", "data/live.json"];
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, { cache: "no-store", signal });
+      if (!response.ok) continue;
+      const snapshot = await response.json();
+      if (isValidSnapshot(snapshot)) return snapshot;
+    } catch {
+      /* Try the next endpoint. */
+    }
+  }
+  return null;
+}
+
 async function loadPublicSignals() {
   if (publicSignalsLoaded) return;
+  setDataMode("demo");
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), 3500);
   try {
-    const response = await fetch("data/live.json", { cache: "no-store", signal: controller.signal });
-    if (!response.ok) return;
-    const snapshot = await response.json();
-    if (
-      !snapshot ||
-      snapshot.schemaVersion !== 1 ||
-      !Array.isArray(snapshot.artists) ||
-      !snapshot.artists.length
-    ) {
-      return;
-    }
+    const snapshot = await fetchSnapshot(controller.signal);
+    if (!snapshot) return;
 
     publicSignalsLoaded = true;
     const self = snapshot.artists.find((artist) => artist.role === "self") || snapshot.artists[0];
     if (self) hydrateSourceAccount(self);
     renderPublicSignals(snapshot);
+    setDataMode("live", snapshot);
     document.documentElement.dataset.publicSignals = "live";
     window.dispatchEvent(new CustomEvent("timbre:public-data", { detail: snapshot }));
   } catch {
@@ -2339,7 +2400,12 @@ async function loadAccount() {
   try {
     const response = await fetch("/api/me", { cache: "no-store" });
     if (!response.ok) return;
-    applyAccount(await response.json());
+    const data = await response.json();
+    applyAccount(data);
+    if (data?.authRequired && !data.authenticated) {
+      const here = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(`/login.html?next=${encodeURIComponent(here)}`);
+    }
   } catch {
     /* Static-only servers do not expose account state; keep demo defaults. */
   }
@@ -2603,6 +2669,8 @@ function runCommand(button) {
     return;
   }
   if (action === "export") exportCsv();
+  else if (action === "report-pdf") openPdfReport("demo");
+  else if (action === "report-digest") openPdfReport("digest");
   else if (action === "share") shareReport();
   else if (action === "toggle-live") setLive(!state.live);
   else if (action === "toggle-preview") setPlaying(!state.playing, true);
@@ -2725,6 +2793,32 @@ function exportCsv() {
   showToast("CSV report downloaded");
 }
 
+/**
+ * Server-rendered PDF report. The file is a real vector document built by
+ * /api/report — not a screenshot. We open it in a new tab (the browser's PDF
+ * viewer) because blob downloads are blocked inside sandboxed preview iframes
+ * and on some mobile browsers; the header action is a plain link, so it still
+ * works with JavaScript disabled.
+ */
+function openPdfReport(source = "demo") {
+  const url = `/api/report?source=${encodeURIComponent(source)}&inline=1&t=${Date.now()}`;
+  /* No "noopener" feature string: with it the call returns null by spec, which
+     would look like a blocked popup even when the tab opened fine. */
+  const win = window.open(url, "_blank");
+  if (win) {
+    try {
+      win.opener = null;
+    } catch {
+      /* cross-origin window: nothing to do */
+    }
+    showToast(source === "digest" ? "Digest PDF opened in a new tab" : "PDF report opened in a new tab");
+    return;
+  }
+  /* Popup blocked (or in an iframe without allow-popups): same-tab navigation
+     still renders the PDF in the browser viewer. */
+  window.location.assign(url);
+}
+
 /* --------------------------------------------------------------------------
    Interactions
    -------------------------------------------------------------------------- */
@@ -2740,8 +2834,20 @@ function initActions() {
 
   $$("[data-export]").forEach((button) => button.addEventListener("click", exportCsv));
 
+  $$("[data-report-pdf]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      /* Let real new-tab/middle clicks behave natively. */
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+      event.preventDefault();
+      openPdfReport(new URL(link.href, window.location.origin).searchParams.get("source") || "demo");
+    });
+  });
+
   $$("[data-connect-source]").forEach((button) => {
-    button.addEventListener("click", () => showToast("Opening secure source connection"));
+    button.addEventListener("click", () => {
+      /* Honest placeholder until the OAuth connectors exist (see README). */
+      showToast("Source OAuth is not configured yet — see README › Making it functional");
+    });
   });
 
   const repeat = $("#repeatPause");
