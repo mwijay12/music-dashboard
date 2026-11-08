@@ -11,7 +11,10 @@
     "dev": "node server/index.mjs",
     "typecheck": "tsc --noEmit && tsc -p pipeline/tsconfig.json --noEmit",
     "ingest": "tsx pipeline/src/ingest.ts",
-    "build:vercel": "node scripts/build-static.mjs"
+    "build:vercel": "node scripts/build-static.mjs",
+    "test": "node --import tsx --test \"pipeline/src/**/*.test.ts\"",
+    "digest": "tsx pipeline/src/digest.ts",
+    "report": "node scripts/render-report.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -23,6 +26,7 @@
     "firebase-admin": "^14.5.0",
     "google-auth-library": "^11.3.3",
     "lucide-react": "^0.468.0",
+    "pdfkit": "^0.20.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tailwind-merge": "^2.6.0"

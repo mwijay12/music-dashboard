@@ -7,6 +7,9 @@ import cookieParser from "cookie-parser";
 import express from "express";
 import { OAuth2Client } from "google-auth-library";
 
+import { buildReportPdf, reportFileName } from "../serverless/report/pdf.mjs";
+import { buildReportData } from "../serverless/report/data.mjs";
+
 const ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const PORT = Number(process.env.PORT || 8130);
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
@@ -221,6 +224,32 @@ app.get("/api/snapshot", async (req, res) => {
     return res.type("application/json").send(await response.text());
   } catch {
     return res.status(502).json({ error: "Snapshot source unreachable." });
+  }
+});
+
+app.get("/api/report", async (req, res, next) => {
+  const source = String(req.query.source || "auto").toLowerCase();
+  if (!["auto", "demo", "digest"].includes(source)) {
+    return res.status(400).json({ error: "Unknown source. Use demo, digest or auto." });
+  }
+  try {
+    const data = buildReportData({ mode: source });
+    if (!data) {
+      return res.status(404).json({
+        error: "No Audiomack digest has been imported yet. Run `npm run digest -- --file <email.txt>`.",
+      });
+    }
+    const pdf = await buildReportPdf(data);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${reportFileName(data)}"`,
+      "Content-Length": pdf.length,
+      "Cache-Control": "no-store",
+      "X-Report-Mode": data.source || data.mode,
+    });
+    res.status(200).end(pdf);
+  } catch (error) {
+    next(error);
   }
 });
 

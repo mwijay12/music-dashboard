@@ -2669,6 +2669,8 @@ function runCommand(button) {
     return;
   }
   if (action === "export") exportCsv();
+  else if (action === "report-pdf") downloadPdfReport();
+  else if (action === "report-digest") downloadPdfReport(null, "digest");
   else if (action === "share") shareReport();
   else if (action === "toggle-live") setLive(!state.live);
   else if (action === "toggle-preview") setPlaying(!state.playing, true);
@@ -2791,6 +2793,52 @@ function exportCsv() {
   showToast("CSV report downloaded");
 }
 
+/**
+ * Server-rendered PDF report. The file is a real vector document built by
+ * /api/report — not a screenshot — so we fetch it as a blob, honour the
+ * server's filename, and surface failures instead of navigating away.
+ */
+async function downloadPdfReport(button, source) {
+  const mode = source || button?.dataset.reportSource || "demo";
+  const label = button?.querySelector("[data-report-label]");
+  const original = label ? label.textContent : null;
+  if (button) {
+    button.setAttribute("aria-busy", "true");
+    button.classList.add("is-busy");
+    if (label) label.textContent = "Building…";
+  }
+  try {
+    const response = await fetch(`/api/report?source=${encodeURIComponent(mode)}`, {
+      headers: { accept: "application/pdf" },
+    });
+    if (!response.ok) throw new Error(`report ${response.status}`);
+    const blob = await response.blob();
+    if (response.headers.get("content-type")?.includes("application/json")) {
+      const payload = await response.json();
+      throw new Error(payload.error || "report unavailable");
+    }
+    const disposition = response.headers.get("content-disposition") || "";
+    const match = disposition.match(/filename="([^"]+)"/);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = match ? match[1] : `timbre-report-${TODAY.toISOString().slice(0, 10)}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+    showToast("PDF report downloaded");
+  } catch (error) {
+    showToast("PDF report unavailable right now");
+  } finally {
+    if (button) {
+      button.removeAttribute("aria-busy");
+      button.classList.remove("is-busy");
+      if (label && original) label.textContent = original;
+    }
+  }
+}
+
 /* --------------------------------------------------------------------------
    Interactions
    -------------------------------------------------------------------------- */
@@ -2805,6 +2853,10 @@ function initActions() {
   });
 
   $$("[data-export]").forEach((button) => button.addEventListener("click", exportCsv));
+
+  $$("[data-report-pdf]").forEach((button) =>
+    button.addEventListener("click", () => downloadPdfReport(button))
+  );
 
   $$("[data-connect-source]").forEach((button) => {
     button.addEventListener("click", () => {

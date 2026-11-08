@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "account": "Piano Sifa Afro Gospel Amapiano Hub",
+  "updatedAt": "2026-11-08T01:24:35.222Z",
+  "latest": {
+    "account": "Piano Sifa Afro Gospel Amapiano Hub",
+    "periodEnd": "2026-11-07",
+    "totals": {
+      "plays": 103,
+      "followers": 0,
+      "likes": 0
+    },
+    "tracks": [
+      {
+        "title": "Lango la Mbinguni",
+        "plays": 300
+      },
+      {
+        "title": "Mwamba",
+        "plays": 160
+      },
+      {
+        "title": "Jesus in me!",
+        "plays": 110
+      },
+      {
+        "title": "Hakuna Mungu kama Wewe",
+        "plays": 90
+      },
+      {
+        "title": "Ningekuwaa Wapi?",
+        "plays": 90
+      }
+    ],
+    "diagnostics": {
+      "topTrackSum": 750,
+      "scopeMismatch": true,
+      "notes": [
+        "Per-song plays total 750 but the digest reports 103 plays for the period — the headline number is window-scoped (7 days) while song counts are lifetime. Store both, and never subtract one from the other."
+      ]
+    }
+  },
+  "history": [
+    {
+      "periodEnd": "2026-11-07",
+      "capturedAt": "2026-11-08T01:24:35.222Z",
+      "totals": {
+        "plays": 103,
+        "followers": 0,
+        "likes": 0
+      },
+      "topTrackSum": 750,
+      "tracks": [
+        {
+          "title": "Lango la Mbinguni",
+          "plays": 300
+        },
+        {
+          "title": "Mwamba",
+          "plays": 160
+        },
+        {
+          "title": "Jesus in me!",
+          "plays": 110
+        },
+        {
+          "title": "Hakuna Mungu kama Wewe",
+          "plays": 90
+        },
+        {
+          "title": "Ningekuwaa Wapi?",
+          "plays": 90
+        }
+      ]
+    }
+  ]
+}

@@ -1043,6 +1043,35 @@ html.js [data-reveal] { opacity: 0; }
   margin-bottom: 26px;
 }
 .page-head-copy { min-width: 0; }
+.digest-card {
+  border-color: color-mix(in oklab, var(--accent) 26%, var(--line));
+  background: color-mix(in oklab, var(--accent) 5%, var(--surface));
+}
+
+.digest-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.digest-meta {
+  font: 500 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+[data-report-pdf][aria-busy="true"] {
+  opacity: 0.72;
+  pointer-events: none;
+  cursor: progress;
+}
+
+[data-report-pdf][aria-busy="true"] .btn-arrow {
+  opacity: 0.3;
+}
+
 .page-head-actions { display: flex; align-items: center; gap: 8px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
 .page-head .display { max-width: 20ch; }
 

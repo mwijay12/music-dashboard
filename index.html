@@ -335,9 +335,10 @@
               <svg class="icon"><use href="#i-share"/></svg>
               Share report
             </button>
-            <button class="btn btn-primary" type="button" data-export data-magnetic>
+            <button class="btn btn-ghost" type="button" data-export>Export CSV</button>
+            <button class="btn btn-primary" type="button" data-report-pdf data-report-source="demo" data-magnetic>
               <svg class="icon"><use href="#i-download"/></svg>
-              Export CSV
+              <span data-report-label>PDF report</span>
               <svg class="icon btn-arrow"><use href="#i-arrow-right"/></svg>
             </button>
           </div>
@@ -943,6 +944,27 @@
 
         <div class="source-accounts" id="sourceAccounts"></div>
 
+        <article class="card digest-card" data-reveal>
+          <header class="card-head">
+            <div>
+              <p class="kicker">Imported data</p>
+              <h2>Audiomack weekly digest</h2>
+            </div>
+            <span class="badge badge-positive">Real account</span>
+          </header>
+          <p class="card-note">
+            Piano Sifa Afro Gospel Amapiano Hub — 103 plays in the seven days to 7 Nov, 750 lifetime plays across five
+            tracks. Parsed from the weekly email by <code>npm run digest</code>; the PDF below is built from that file.
+          </p>
+          <div class="digest-actions">
+            <button class="btn btn-primary" type="button" data-report-pdf data-report-source="digest">
+              <svg class="icon"><use href="#i-download"/></svg>
+              <span data-report-label>Digest PDF</span>
+            </button>
+            <span class="digest-meta">data/audiomack-digest.json · 1 week stored</span>
+          </div>
+        </article>
+
         <article class="card public-signals" id="publicSignals" data-reveal hidden>
           <header class="card-head">
             <div>
@@ -1036,6 +1058,14 @@
         </div>
         <p class="palette-label">Actions</p>
         <div class="cmd-group">
+          <button class="cmd" type="button" data-action="report-pdf">
+            <span class="cmd-icon"><svg class="icon"><use href="#i-download"/></svg></span>
+            <span class="cmd-label">Download PDF report</span>
+          </button>
+          <button class="cmd" type="button" data-action="report-digest">
+            <span class="cmd-icon"><svg class="icon"><use href="#i-download"/></svg></span>
+            <span class="cmd-label">Download Audiomack digest PDF</span>
+          </button>
           <button class="cmd" type="button" data-action="export">
             <span class="cmd-icon"><svg class="icon"><use href="#i-download"/></svg></span>
             <span class="cmd-label">Export report as CSV</span>

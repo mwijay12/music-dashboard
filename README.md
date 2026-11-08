@@ -36,6 +36,8 @@ Build outputs `bundle.js` and `globe-dist/` are committed because the Express se
 | Google sign-in | **Real** when `GOOGLE_CLIENT_ID` + `SESSION_SECRET` are configured (ID token verified server-side) |
 | Session handling | **Real** — signed `HttpOnly` cookie. Stateless on Vercel; `data/users.json` on the Express server |
 | Public metadata card (followers, popularity, channel views) and source accounts | **Real** when `data/live.json` contains artists |
+| PDF report (`GET /api/report`) | **Real** — server-rendered two-page A4 document, vector charts, no screenshots |
+| Audiomack weekly digest (`data/audiomack-digest.json`) | **Real** — parsed from the artist's weekly email; see [docs/AUTOMATION-PLAN.md](docs/AUTOMATION-PLAN.md) |
 | Streams, listeners, saves, revenue, per-track share, per-city listeners, heatmap, growth chart | **Demo** — seeded PRNG (`mulberry32`) so every reload is identical |
 | “Live” ticker and activity feed | **Simulated** — browser timers that add fake listeners/activity every 4.5s / 9s |
 | Private analytics (Spotify for Artists, YouTube Analytics) | **Not implemented** — see the roadmap |
@@ -61,10 +63,11 @@ boot.js             sets the `js` class before first paint (CSP-friendly, no inl
 globe/              React island source (cobe globe) → globe-dist/
 components/ui/      cobe-globe.tsx
 server/index.mjs    Express server for local/Node hosting
-api/                Vercel serverless functions (health, config, me, logout, auth/google, snapshot)
+api/                Vercel serverless functions (health, config, me, logout, auth/google, snapshot, report)
 middleware.js       Edge auth gate, active only when AUTH_REQUIRED=true
-serverless/         shared session signing for the serverless functions
-pipeline/           Spotify/YouTube ingest → data/live.json
+serverless/         shared session signing + the PDF report renderer (report/pdf.mjs)
+pipeline/           Spotify/YouTube ingest → data/live.json; Audiomack digest parser + tests
+docs/               AUTOMATION-PLAN.md — connector matrix, EC2 sizing, phased rollout
 scripts/            build-static.mjs (assembles public/ for Vercel)
 ```
 
@@ -155,6 +158,31 @@ An empty snapshot (`artists: []`) is treated as “no data yet” and the dashbo
 
 ---
 
+## PDF reports
+
+`GET /api/report?source=demo|digest|auto` returns a real PDF — A4, two pages, charts and sparklines drawn as vector geometry with pdfkit. No headless browser, no screenshots, no image assets; the file is ~10 KB and its text stays selectable. The header **PDF report** button downloads the demo report that matches the dashboard; the **Digest PDF** card on `/sources` renders the imported Audiomack numbers.
+
+```bash
+npm run report                     # writes reports/*.pdf without a server
+curl -OJ 'http://localhost:8130/api/report?source=digest'
+```
+
+`source=auto` (the default) prefers the imported digest and falls back to demo data. Both datasets live in `serverless/report/data.mjs`; the renderer never changes when you swap them.
+
+## Audiomack weekly digest
+
+Audiomack's weekly email is the only route to this account's real plays — there is no digest endpoint and the Data API needs an approved app. The parser handles the email body and keeps one entry per week, which is the start of a genuine history:
+
+```bash
+npm run digest -- --file pipeline/fixtures/audiomack-digest-2026-11-07.txt
+npm test                           # 6 parser tests
+```
+
+Two things worth knowing, both enforced in code:
+
+- **Two clocks.** The digest's headline `103 plays` covers seven days while per-song counts (300, 160, 110, 90, 90) are lifetime. The parser stores both and flags the mismatch instead of subtracting them.
+- **No scraping.** An agent cannot legally log into the Audiomack dashboard. Forwarding the email to an IMAP mailbox is the supported automation path; see the plan for the Gmail-scope trade-off.
+
 ## Making it functional
 
 The UI is already structured for real data: every view renders from module-level data (`METRICS`, `TRACKS`, `CITIES`, …) and public snapshot values are merged into the source cards. The remaining work is data acquisition and storage, not interface rewiring.
@@ -200,7 +228,8 @@ The UI is already structured for real data: every view renders from module-level
 
 - `scenes.js` still contains an unused three.js globe builder (`createGlobe`); only the orbs are mounted. The visible globe is the cobe island.
 - three.js accounts for ~125 KB gzip of `bundle.js`, which is the single largest frontend cost.
-- `app.js` and `scenes.js` are plain JS and outside the TypeScript project; there is no lint or test suite yet.
+- `app.js` and `scenes.js` are plain JS and outside the TypeScript project and have no lint; only the Audiomack digest parser has tests (`npm test`, 6 cases).
+- The PDF report's demo dataset is still the demo dataset — only `source=digest` renders numbers from a real account.
 - Charts are pointer/touch driven but not keyboard operable; a screen-reader data table is not included.
 - The Express server does not compress responses (Vercel's edge does automatically).
 
@@ -220,3 +249,6 @@ See `FRONTEND-REVIEW.md` for the full audit, measurements and ranked fixes.
 | `npm run build:vercel` | Assembles `public/` for the Vercel deployment |
 | `npm run typecheck` | TypeScript check for the globe island and pipeline |
 | `npm run ingest` | Runs the Spotify/YouTube ingest pipeline |
+| `npm run digest` | Parses an Audiomack weekly email into `data/audiomack-digest.json` |
+| `npm run report` | Renders the demo PDF report into `reports/` |
+| `npm test` | Runs the pipeline parser tests (`node --test` via tsx) |

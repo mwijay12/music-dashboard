@@ -5,6 +5,11 @@
   "outputDirectory": "public",
   "cleanUrls": false,
   "trailingSlash": false,
+  "functions": {
+    "api/report.js": {
+      "includeFiles": ["node_modules/pdfkit/js/data/**", "data/audiomack-digest.json"]
+    }
+  },
   "redirects": [
     { "source": "/login", "destination": "/login.html", "permanent": false }
   ],
