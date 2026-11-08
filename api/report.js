@@ -5,7 +5,7 @@
  * pdfkit — no headless browser, no screenshots, no image assets. The same
  * renderer powers `GET /api/report` on the local Express server.
  */
-import { buildReportData } from "../serverless/report/data.mjs";
+import { resolveReportData } from "../serverless/report/data.mjs";
 import { buildReportPdf, reportFileName } from "../serverless/report/pdf.mjs";
 
 export const config = { runtime: "nodejs" };
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const data = buildReportData({ mode: source });
+    const data = await resolveReportData({ mode: source });
     if (!data) {
       return res.status(404).json({
         error: "No Audiomack digest has been imported yet. Run `npm run digest -- --file <email.txt>`.",

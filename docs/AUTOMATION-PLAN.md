@@ -149,6 +149,17 @@ volumes: { pg: {} }
 
 ## 6. Storage & data model
 
+**Do we need Firebase?** No — not today. The split is:
+
+| Host | Can write files? | Owns | Talks to |
+| --- | --- | --- | --- |
+| **Vercel** (dashboard, `/api/report`) | **No** — read-only filesystem | the UI and the PDF renderer | pulls `DIGEST_URL` on demand |
+| **EC2** (api + inbox timer) | Yes | `data/audiomack-digest.json`, later Postgres | IMAP, Audiomack API, Google |
+
+The bridge is one env var: `DIGEST_URL=https://<your-box>/api/digest`, set on Vercel. `resolveReportData()` fetches it with a 4 s timeout, falls back to the copy committed in the repo, and only then to demo data — so the deployed PDF follows the box within a request, without redeploying. `DIGEST_TOKEN` (same value both sides) locks the endpoint down.
+
+Firestore/KV only becomes interesting if you want *several* readers/writers with no server of your own (multi-user SaaS, or scheduled JSON writes straight from Vercel Cron). That trades a server for a vendor, ACLs and quotas; the `firebase-admin` code already in `pipeline/src/store/firestore.ts` is the seed if you ever go that way.
+
 Today: `data/audiomack-digest.json` (file) — fine for one artist, one account. Phase 2 moves to Postgres:
 
 ```sql

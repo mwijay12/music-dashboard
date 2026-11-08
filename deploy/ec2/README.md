@@ -86,6 +86,15 @@ sudo certbot --nginx -d timbre.example.com
 
 Add `https://timbre.example.com` to the Google OAuth client's **Authorized JavaScript origins** afterwards.
 
+## 3b. Feed the Vercel deployment (optional but recommended)
+
+The box owns the data; the deployed dashboard can read it without a redeploy:
+
+1. On the box: set `DIGEST_TOKEN=<long random>` in `/opt/timbre/.env`, restart `timbre-api`.
+2. On Vercel: add `DIGEST_URL=https://your-domain/api/digest` and the same `DIGEST_TOKEN`, then redeploy once.
+
+`/api/report?source=digest` on Vercel now serves the freshest week from the box, and silently falls back to the committed copy when the box is unreachable or slow (4 s timeout).
+
 ## 4. Verify
 
 ```bash

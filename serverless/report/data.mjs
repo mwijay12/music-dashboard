@@ -148,6 +148,48 @@ export function readDigestReport(file = DIGEST_PATH) {
   }
 }
 
+/**
+ * Resolves the dataset for a report request.
+ *
+ * Priority: explicit demo → remote digest (DIGEST_URL, e.g. the EC2 box) →
+ * digest committed in this repo → demo. The remote hop is what lets an EC2
+ * ingester feed the Vercel-hosted dashboard without redeploying: Vercel's
+ * filesystem is read-only, the box owns the data.
+ */
+export async function resolveReportData(options = {}) {
+  const mode = options.mode || "auto";
+  if (mode === "demo") return buildReportData({});
+
+  const url = options.digestUrl || process.env.DIGEST_URL;
+  if (url) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          accept: "application/json",
+          ...(process.env.DIGEST_TOKEN ? { authorization: `Bearer ${process.env.DIGEST_TOKEN}` } : {}),
+        },
+        signal: AbortSignal.timeout(options.timeoutMs || 4000),
+      });
+      if (response.ok) {
+        const store = await response.json();
+        const report = digestToReport(store.latest || store);
+        if (report) {
+          report.generatedAt = new Date().toISOString();
+          report.upstream = "digest-url";
+          return report;
+        }
+      }
+    } catch {
+      /* remote down: fall through to the committed copy */
+    }
+  }
+
+  const local = readDigestReport(options.digestFile);
+  if (local) return local;
+
+  return mode === "digest" ? null : buildReportData({});
+}
+
 export function buildReportData(options = {}) {
   if (options.digest) return options.digest;
 

@@ -8,7 +8,7 @@ import express from "express";
 import { OAuth2Client } from "google-auth-library";
 
 import { buildReportPdf, reportFileName } from "../serverless/report/pdf.mjs";
-import { buildReportData } from "../serverless/report/data.mjs";
+import { resolveReportData } from "../serverless/report/data.mjs";
 
 const ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const PORT = Number(process.env.PORT || 8130);
@@ -234,7 +234,7 @@ app.get("/api/report", async (req, res, next) => {
     return res.status(400).json({ error: "Unknown source. Use demo, digest or auto." });
   }
   try {
-    const data = buildReportData({ mode: source });
+    const data = await resolveReportData({ mode: source });
     if (!data) {
       return res.status(404).json({
         error: "No Audiomack digest has been imported yet. Run `npm run digest -- --file <email.txt>`.",
@@ -251,6 +251,24 @@ app.get("/api/report", async (req, res, next) => {
     res.status(200).end(pdf);
   } catch (error) {
     next(error);
+  }
+});
+
+app.get("/api/digest", async (req, res, next) => {
+  /* Public read of the imported digest so the Vercel deployment can pull it via
+     DIGEST_URL. Set DIGEST_TOKEN to require a bearer token. */
+  res.set("Cache-Control", "no-store");
+  const token = process.env.DIGEST_TOKEN?.trim();
+  if (token) {
+    const header = req.get("authorization") || "";
+    const provided = header.startsWith("Bearer ") ? header.slice(7).trim() : String(req.query.token || "");
+    if (provided !== token) return res.status(401).json({ error: "Digest token required." });
+  }
+  try {
+    const raw = await fs.readFile(path.join(ROOT, "data", "audiomack-digest.json"), "utf8");
+    return res.type("application/json").send(raw);
+  } catch {
+    return res.status(404).json({ error: "No digest imported yet." });
   }
 });
 
