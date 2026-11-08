@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
  */
 
 const DEMO = {
+  mode: "demo",
   artist: "Mira Vale",
   periodStart: "2026-10-05",
   periodEnd: "2026-11-01",
