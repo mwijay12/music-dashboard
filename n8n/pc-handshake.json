@@ -1,0 +1,96 @@
+{
+  "name": "Timbre \u2014 PC handshake (test only)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "timbre-handshake/jobs",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "3b45319a-acd7-4973-806e-e93222ecfb86",
+      "name": "PC asks for a job",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "1041b06d-24fc-4303-b22d-6e74210dab1d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handshake only: deliberately returns one echo job for every request.\n// Do not use --loop: this is not a queue.\nreturn [{ json: { job: { id: \"handshake-01\", type: \"echo\", payload: { message: \"Hello from n8n\" } } } }];"
+      },
+      "id": "4d165c46-5447-47ad-b8cb-df27c70fafbd",
+      "name": "Send test job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "timbre-handshake/jobs/result",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "57bad92d-2f55-462c-8ead-218291fecc3e",
+      "name": "PC reports result",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "7bf578f9-4041-4fdd-80fe-0877d534693c"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The incoming body is available on the webhook node in this execution.\n// Do not copy incoming headers into the response.\nreturn [{ json: { received: true } }];"
+      },
+      "id": "ce0148a6-c10f-4b2f-9e40-8731a31b3cab",
+      "name": "Acknowledge result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "PC asks for a job": {
+      "main": [
+        [
+          {
+            "node": "Send test job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PC reports result": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {}
+}

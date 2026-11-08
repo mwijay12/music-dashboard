@@ -272,7 +272,7 @@ export async function runOnce(options) {
 /* ------------------------------------------------------------------ */
 
 export function parseArgs(argv) {
-  const args = { mode: "once", sleep: 30, cwd: process.cwd() };
+  const args = { mode: "once", sleep: 30, cwd: process.cwd(), token: process.env.TIMBRE_WORKER_TOKEN };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     const next = () => argv[++index];
@@ -299,7 +299,7 @@ const HELP = `Timbre PC worker ${VERSION}
 
   --url <url>         n8n webhook that hands out jobs (POST)
   --result-url <url>  where results go (default: <url>/result)
-  --token <token>     shared secret, sent as x-timbre-token
+  --token <token>     shared secret, sent as x-timbre-token (or set TIMBRE_WORKER_TOKEN)
   --worker <name>     label shown in n8n (default: hostname)
   --once              claim at most one job, then exit (default)
   --loop              keep polling
