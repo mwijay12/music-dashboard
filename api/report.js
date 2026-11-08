@@ -17,6 +17,7 @@ export default async function handler(req, res) {
   }
 
   const source = String(req.query?.source || "auto").toLowerCase();
+  const inline = ["1", "true", "yes"].includes(String(req.query?.inline || "").toLowerCase());
   if (!["auto", "demo", "digest"].includes(source)) {
     return res.status(400).json({ error: "Unknown source. Use demo, digest or auto." });
   }
@@ -31,7 +32,10 @@ export default async function handler(req, res) {
     const pdf = await buildReportPdf(data);
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${reportFileName(data)}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `${inline ? "inline" : "attachment"}; filename="${reportFileName(data)}"`
+    );
     res.setHeader("Content-Length", pdf.length);
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Report-Mode", data.source || data.mode);

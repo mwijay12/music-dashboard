@@ -1048,6 +1048,21 @@ html.js [data-reveal] { opacity: 0; }
   background: color-mix(in oklab, var(--accent) 5%, var(--surface));
 }
 
+a.btn {
+  text-decoration: none;
+}
+
+.digest-link {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.digest-link:hover {
+  color: var(--ink);
+}
+
 .digest-actions {
   display: flex;
   align-items: center;

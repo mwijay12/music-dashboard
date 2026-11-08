@@ -229,6 +229,7 @@ app.get("/api/snapshot", async (req, res) => {
 
 app.get("/api/report", async (req, res, next) => {
   const source = String(req.query.source || "auto").toLowerCase();
+  const inline = ["1", "true", "yes"].includes(String(req.query.inline || "").toLowerCase());
   if (!["auto", "demo", "digest"].includes(source)) {
     return res.status(400).json({ error: "Unknown source. Use demo, digest or auto." });
   }
@@ -242,7 +243,7 @@ app.get("/api/report", async (req, res, next) => {
     const pdf = await buildReportPdf(data);
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${reportFileName(data)}"`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${reportFileName(data)}"`,
       "Content-Length": pdf.length,
       "Cache-Control": "no-store",
       "X-Report-Mode": data.source || data.mode,

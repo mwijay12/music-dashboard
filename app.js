@@ -2669,8 +2669,8 @@ function runCommand(button) {
     return;
   }
   if (action === "export") exportCsv();
-  else if (action === "report-pdf") downloadPdfReport();
-  else if (action === "report-digest") downloadPdfReport(null, "digest");
+  else if (action === "report-pdf") openPdfReport("demo");
+  else if (action === "report-digest") openPdfReport("digest");
   else if (action === "share") shareReport();
   else if (action === "toggle-live") setLive(!state.live);
   else if (action === "toggle-preview") setPlaying(!state.playing, true);
@@ -2795,48 +2795,21 @@ function exportCsv() {
 
 /**
  * Server-rendered PDF report. The file is a real vector document built by
- * /api/report — not a screenshot — so we fetch it as a blob, honour the
- * server's filename, and surface failures instead of navigating away.
+ * /api/report — not a screenshot. We open it in a new tab (the browser's PDF
+ * viewer) because blob downloads are blocked inside sandboxed preview iframes
+ * and on some mobile browsers; the header action is a plain link, so it still
+ * works with JavaScript disabled.
  */
-async function downloadPdfReport(button, source) {
-  const mode = source || button?.dataset.reportSource || "demo";
-  const label = button?.querySelector("[data-report-label]");
-  const original = label ? label.textContent : null;
-  if (button) {
-    button.setAttribute("aria-busy", "true");
-    button.classList.add("is-busy");
-    if (label) label.textContent = "Building…";
+function openPdfReport(source = "demo") {
+  const url = `/api/report?source=${encodeURIComponent(source)}&inline=1&t=${Date.now()}`;
+  const win = window.open(url, "_blank", "noopener");
+  if (win) {
+    showToast(source === "digest" ? "Digest PDF opened in a new tab" : "PDF report opened in a new tab");
+    return;
   }
-  try {
-    const response = await fetch(`/api/report?source=${encodeURIComponent(mode)}`, {
-      headers: { accept: "application/pdf" },
-    });
-    if (!response.ok) throw new Error(`report ${response.status}`);
-    const blob = await response.blob();
-    if (response.headers.get("content-type")?.includes("application/json")) {
-      const payload = await response.json();
-      throw new Error(payload.error || "report unavailable");
-    }
-    const disposition = response.headers.get("content-disposition") || "";
-    const match = disposition.match(/filename="([^"]+)"/);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = match ? match[1] : `timbre-report-${TODAY.toISOString().slice(0, 10)}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-    showToast("PDF report downloaded");
-  } catch (error) {
-    showToast("PDF report unavailable right now");
-  } finally {
-    if (button) {
-      button.removeAttribute("aria-busy");
-      button.classList.remove("is-busy");
-      if (label && original) label.textContent = original;
-    }
-  }
+  /* Popup blocked (or in an iframe without allow-popups): same-tab navigation
+     still renders the PDF in the browser viewer. */
+  window.location.assign(url);
 }
 
 /* --------------------------------------------------------------------------
@@ -2854,9 +2827,14 @@ function initActions() {
 
   $$("[data-export]").forEach((button) => button.addEventListener("click", exportCsv));
 
-  $$("[data-report-pdf]").forEach((button) =>
-    button.addEventListener("click", () => downloadPdfReport(button))
-  );
+  $$("[data-report-pdf]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      /* Let real new-tab/middle clicks behave natively. */
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+      event.preventDefault();
+      openPdfReport(new URL(link.href, window.location.origin).searchParams.get("source") || "demo");
+    });
+  });
 
   $$("[data-connect-source]").forEach((button) => {
     button.addEventListener("click", () => {

@@ -29,7 +29,7 @@ Researched 2026-11-08. "Real metrics" means plays/streams/listeners — not popu
 
 | Source | Real metrics you can get | Access route | Cost / gate | Fits 4 GB EC2 |
 | --- | --- | --- | --- | --- |
-| **Audiomack** | per-track `play_counter`, `favorite`/`repost` counters, `followers_count`, uploads, artist `music_top10` | **Data API v1** (`api.audiomack.com/v1`), free app registration, OAuth 1.0a or bearer token | free; app must be approved | ✅ HTTP only |
+| **Audiomack** | per-track `play_counter`, `favorite`/`repost` counters, `followers_count`, uploads, artist `music_top10` | **Data API v1** (`https://api.audiomack.com/v1`), docs at `https://www.audiomack.com/data-api/docs`, OAuth 1.0a | consumer key/secret issued by Audiomack — no self-serve form; access tokens last 1 year | ✅ HTTP only |
 | **Audiomack (email)** | weekly plays, new followers, likes, top-song plays | weekly email → IMAP → parser (**built**) | free, no approval | ✅ |
 | **Spotify** | real streams, listeners, saves, cities, playlists | **no public API** — Spotify for Artists CSV export, or browser extension that reads the S4A chart DOM | free, manual/extension | ✅ (file upload) |
 | **YouTube** | views, watch time, geography, demographics, traffic sources | YouTube Analytics API (OAuth, owner-only); Data API for counts | free quota (Data API 10k units/day; Analytics separate) | ✅ |
@@ -38,6 +38,12 @@ Researched 2026-11-08. "Real metrics" means plays/streams/listeners — not popu
 | **Instagram** | follower + media insights for business accounts | Instagram Graph API, app review + business account | gated | ✅ |
 | **SoundCloud** | plays/likes on your tracks | API registration **closed** since 2017 (manual waitlist); oEmbed only | effectively no | ⚠️ skip |
 | **Aggregators** | cross-platform plays incl. Audiomack, Anghami, Last.fm listeners | Soundcharts API (paid), Apify actors (per-run) | $ — | ✅ |
+
+**Audiomack URLs (they are easy to get wrong):**
+
+- ✅ `https://www.audiomack.com/data-api/docs` — the documentation (the bare `audiomack.com/data-api` returns a 404 page).
+- ✅ `https://api.audiomack.com/v1` — the API base; `GET /v1/debug` is the smoke test.
+- Auth is **OAuth 1.0a** with a consumer key/secret, not a bearer token: `/v1/request_token` → `audiomack.com/oauth/authenticate` → `/v1/access_token`, and tokens expire after **one year**. Reference implementations live in `github.com/audiomack/audiomack-api-examples`.
 
 **Rule that keeps this honest:** never present a public-count API as a stream count. Spotify's popularity (1–100) is not streams; only S4A exports and distributor reports have real numbers.
 
