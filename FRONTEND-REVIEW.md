@@ -99,7 +99,7 @@ Build flow mzuri kwa static hosting, lakini ina maana `bundle.js` na `globe-dist
 
 ### P1 — Delivery & payload (impact kubwa, effort ndogo)
 
-**F1. Hakuna compression kabisa.** Nimethibitisha kwa `curl`:
+**F1. Hakuna compression kwenye Express server.** Nimethibitisha kwa `curl` (Vercel deployment inacompress automatically, lakini `npm start` haifanyi):
 
 | Asset | Raw | Gzip | Served |
 |---|---|---|---|
