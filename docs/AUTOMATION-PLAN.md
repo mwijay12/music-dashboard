@@ -132,6 +132,10 @@ Measured expectations (steady state, no build tooling on the box):
 
 Approx cost: EC2 ~$25–30/mo, gp3 30 GB ~$2.5/mo, backups ~$1. Vercel stays free-tier for the dashboard.
 
+> **Update (2026-11-08):** n8n already runs on Mwijay's own VPS, so the "avoid n8n" advice above applies only to *this* 4 GB box.
+> The studio pipeline (`docs/STUDIO-ARCHITECTURE.html`) uses the existing n8n as the scheduler/queue and keeps this box
+> as the API + dashboard origin. No extra RAM is spent here.
+
 A ready-to-run bundle lives in **`deploy/ec2/`**: `install.sh` (swap, Node 22, `timbre` user, checkout, `npm ci`, systemd units, staged ufw rules), `timbre-api.service`, `timbre-inbox.timer` (mailbox poll every 15 min), `timbre-backup.timer` (nightly archive of `data/`) and `env.example`. See `deploy/ec2/README.md` for the nginx/TLS step and the verification checklist.
 
 Suggested compose shape (only if you later want containers):

@@ -91,6 +91,7 @@ const tooltipDate = new Intl.DateTimeFormat("en-US", { weekday: "short", month: 
 const longDate = new Intl.DateTimeFormat("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
 const ROUTES = {
+  studio: { title: "Studio", crumb: "Studio" },
   overview: { title: "Overview", crumb: "Overview" },
   streams: { title: "Streams", crumb: "Streams" },
   tracks: { title: "Tracks", crumb: "Tracks" },
@@ -463,7 +464,7 @@ const SETTINGS = [
 ];
 
 const state = {
-  route: "overview",
+  route: "studio",
   range: "30D",
   live: true,
   playing: true,
@@ -571,11 +572,30 @@ function sparkSvg(values, className, width = 100, height = 26, pathClass = "") {
 
 function formatCompact(value) {
   if (!value) return "0";
-  return fmtCompact.format(value).replace(".0K", "K").replace(".0M", "M");
+  // Intl's compact notation already renders 1000 as "1K" and 1204 as "1.2K";
+  // the old `.replace(".0K", "K")` only worked for en-US.
+  return fmtCompact.format(value);
 }
 
 function formatDelta(value) {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
+}
+
+/**
+ * Counters rewrite their text on every frame, which is unusable for a screen
+ * reader (and a live region would narrate every frame). So the animated node is
+ * hidden from AT and its final value sits in a static, clipped mirror.
+ */
+function setAccessibleValue(element, text) {
+  if (!element) return;
+  element.setAttribute("aria-hidden", "true");
+  let mirror = element.nextElementSibling;
+  if (!mirror || !mirror.classList.contains("sr-value")) {
+    mirror = document.createElement("span");
+    mirror.className = "sr-value";
+    element.insertAdjacentElement("afterend", mirror);
+  }
+  if (mirror.textContent !== text) mirror.textContent = text;
 }
 
 function animateNumber(element, target, options = {}) {
@@ -594,6 +614,7 @@ function animateNumber(element, target, options = {}) {
     return fmtInt.format(Math.round(value));
   };
   const final = `${prefix}${format(target)}${suffix}`;
+  setAccessibleValue(element, final);
   if (reduced()) {
     element.textContent = final;
     return;
@@ -1251,6 +1272,22 @@ function renderStreamChart(animate = true) {
   if (description) {
     const granularity = state.range === "90D" ? "Weekly streams" : "Daily streams";
     description.textContent = `${granularity} for the ${data.config.label}. The current period is trending ${data.delta} percent above the previous period.`;
+  }
+
+  const tableBody = $("#chartData tbody");
+  const tableCaption = $("#chartData caption");
+  if (tableBody && tableCaption) {
+    tableCaption.textContent = `Streams for the ${data.config.label} (${state.range === "90D" ? "weekly" : "daily"} values)`;
+    tableBody.replaceChildren(...data.dates.map((date, index) => {
+      const row = document.createElement("tr");
+      [shortDate.format(date), fmtInt.format(data.current[index]), fmtInt.format(data.previous[index])].forEach((value, column) => {
+        const cell = document.createElement(column === 0 ? "th" : "td");
+        if (column === 0) cell.scope = "row";
+        cell.textContent = value;
+        row.appendChild(cell);
+      });
+      return row;
+    }));
   }
 
   if (animate) {
@@ -2104,13 +2141,72 @@ async function loadPublicSignals() {
   }
 }
 
+/* Local planning only. Nothing here creates an n8n job or schedules a post. */
+function initStudioPlanner() {
+  const form = $("#studioForm");
+  const list = $("#studioIdeas");
+  const message = $("#studioMessage");
+  if (!form || !list || !message) return;
+  const key = "timbre:studio-ideas:v1";
+  let ideas = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || "[]");
+    if (Array.isArray(saved)) ideas = saved.filter((item) => item && typeof item.title === "string");
+  } catch {
+    message.textContent = "Could not read saved drafts on this browser.";
+  }
+  function render() {
+    list.replaceChildren();
+    if (!ideas.length) {
+      const empty = document.createElement("p");
+      empty.className = "studio-empty";
+      empty.textContent = "Hakuna ideas bado. Anza na wazo moja hapo upande wa planner.";
+      list.append(empty);
+      return;
+    }
+    ideas.forEach((idea, index) => {
+      const item = document.createElement("article");
+      item.className = "studio-idea";
+      const title = document.createElement("strong");
+      title.textContent = idea.title;
+      const meta = document.createElement("p");
+      meta.textContent = `${idea.lane || "Music / YouTube"}${idea.date ? ` · Target: ${idea.date}` : ""} · Draft`;
+      item.append(title, meta);
+      if (idea.notes) { const notes = document.createElement("p"); notes.className = "studio-idea-notes"; notes.textContent = idea.notes; item.append(notes); }
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "studio-remove";
+      remove.textContent = "Remove";
+      remove.setAttribute("aria-label", `Remove ${idea.title}`);
+      remove.addEventListener("click", () => {
+        const next = ideas.filter((_, i) => i !== index);
+        try { localStorage.setItem(key, JSON.stringify(next)); ideas = next; render(); message.textContent = "Draft removed."; }
+        catch { message.textContent = "Could not save changes in this browser."; }
+      });
+      item.append(remove);
+      list.append(item);
+    });
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const title = String(data.get("title") || "").trim();
+    if (!title) { message.textContent = "Please enter a content idea."; return; }
+    const next = [{ title, lane: String(data.get("lane") || ""), date: String(data.get("date") || ""), notes: String(data.get("notes") || "").trim() }, ...ideas];
+    try { localStorage.setItem(key, JSON.stringify(next)); ideas = next; form.reset(); render(); message.textContent = "Draft saved on this browser — not scheduled or sent."; }
+    catch { message.textContent = "Could not save this draft. Check browser storage settings."; }
+  });
+  $("#studioPlanButton")?.addEventListener("click", () => { $("#studio-planner").scrollIntoView({ behavior: reduced() ? "auto" : "smooth" }); form.elements.title.focus({ preventScroll: true }); });
+  render();
+}
+
 /* --------------------------------------------------------------------------
    Router & chrome
    -------------------------------------------------------------------------- */
 
 function routeFromHash() {
   const value = window.location.hash.replace(/^#\/?/, "").split("?")[0];
-  return ROUTES[value] ? value : "overview";
+  return ROUTES[value] ? value : "studio";
 }
 
 function routeProgress() {
@@ -2164,13 +2260,14 @@ function enterView(route) {
 let routeTransitionId = 0;
 
 function setRoute(route, initial = false) {
-  if (!ROUTES[route]) route = "overview";
+  if (!ROUTES[route]) route = "studio";
   const view = $(`[data-view="${route}"]`);
   if (!view) return;
   const outgoing = $$("[data-view]").find((section) => !section.hidden && section !== view);
   const animateRoute = Boolean(!initial && outgoing && gsap && !reduced());
   const transitionId = ++routeTransitionId;
   state.route = route;
+  document.body.classList.toggle("is-studio", route === "studio");
 
   $$("[data-view]").forEach((section) => {
     section.hidden = animateRoute ? section !== outgoing : section !== view;
@@ -2187,6 +2284,8 @@ function setRoute(route, initial = false) {
   const crumb = $("#crumbCurrent");
   if (crumb) crumb.textContent = ROUTES[route].crumb;
   document.title = `${ROUTES[route].title} — Timbre`;
+  const announcement = $("#routeAnnouncement");
+  if (announcement && !initial) announcement.textContent = `${ROUTES[route].title} page`;
 
   const dialog = $("#trackDialog");
   if (dialog && dialog.open) dialog.close();
@@ -2731,14 +2830,13 @@ function initPalette() {
    -------------------------------------------------------------------------- */
 
 function reportSummary() {
+  const topTrack = TRACKS.reduce((best, track) => !best || track.streams > best.streams ? track : best, null);
+  const topCity = CITIES.reduce((best, city) => !best || city.listeners > best.listeners ? city : best, null);
   return [
-    "Timbre — Mira Vale · last 30 days",
-    "Streams: 2,847,193 (+18.4%)",
-    "Monthly listeners: 612,408 (+9.2%)",
-    "Saves: 84,211 (+24.1%)",
-    "Revenue: $18,420 (+12.8%)",
-    "Top track: Hollow Bloom — 1,204,880 streams",
-    "Top city: London — 82.4K listeners",
+    "Timbre — Mira Vale · last 30 days (demo data)",
+    ...METRICS.map((metric) => `${metric.label}: ${metric.prefix || ""}${fmtInt.format(metric.value)} (${formatDelta(metric.delta)})`),
+    ...(topTrack ? [`Top track: ${topTrack.name} — ${fmtInt.format(topTrack.streams)} streams`] : []),
+    ...(topCity ? [`Top city: ${topCity.name} — ${formatCompact(topCity.listeners)} listeners`] : []),
   ].join("\n");
 }
 
@@ -2759,10 +2857,7 @@ async function shareReport(track) {
 function exportCsv() {
   const rows = [
     ["Metric", "Value", "Change"],
-    ["Streams", "2,847,193", "+18.4%"],
-    ["Monthly listeners", "612,408", "+9.2%"],
-    ["Saves", "84,211", "+24.1%"],
-    ["Revenue", "$18,420", "+12.8%"],
+    ...METRICS.map((metric) => [metric.label, `${metric.prefix || ""}${fmtInt.format(metric.value)}`, formatDelta(metric.delta)]),
     [],
     ["Track", "Streams", "Share", "30d change"],
     ...TRACKS.map((track) => [track.name, String(track.streams), `${track.share}%`, formatDelta(track.delta)]),
@@ -2992,6 +3087,7 @@ async function init() {
   renderWave();
   duplicateMarquee();
 
+  initStudioPlanner();
   initAccount();
   await loadPublicSignals();
 
@@ -3011,7 +3107,7 @@ async function init() {
   initScenes();
   setReducedMotion(reduced());
 
-  if (!window.location.hash) window.history.replaceState(null, "", "#/overview");
+  if (!window.location.hash) window.history.replaceState(null, "", "#/studio");
   setRoute(routeFromHash(), true);
 
   window.addEventListener("hashchange", () => setRoute(routeFromHash()));
