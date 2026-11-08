@@ -79,7 +79,7 @@ const DEMO = {
     },
   ],
   coverage: [
-    { platform: "Audiomack", route: "Weekly email → IMAP parser", state: "planned" },
+    { platform: "Audiomack", route: "Weekly email · IMAP parser", state: "planned" },
     { platform: "Spotify", route: "Spotify for Artists CSV export", state: "manual" },
     { platform: "YouTube", route: "YouTube Analytics API (OAuth)", state: "planned" },
     { platform: "Apple Music", route: "No public analytics API", state: "unavailable" },
