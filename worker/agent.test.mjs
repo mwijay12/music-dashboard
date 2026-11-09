@@ -145,7 +145,7 @@ test("a failing job is still reported, so the queue never stalls", async () => {
     assert.equal(result.ok, false);
     assert.equal(reported.jobId, "bad-1");
     assert.equal(reported.ok, false);
-    assert.match(reported.error, /unknown job type/);
+    assert.match(reported.error, /remote job type not enabled/);
   } finally {
     server.close();
   }
@@ -183,4 +183,55 @@ test("leased job rejects a stale or missing acknowledgement", async () => {
     try { await assert.rejects(runOnce({ url: base }), /lease not accepted/); }
     finally { server.close(); }
   }
+});
+
+test("remote media jobs are rejected, even if the webhook requests them", async () => {
+  let report;
+  const { server, base } = await withServer((request) => {
+    if (request.url.endsWith('/result')) { report = JSON.parse(request.body); return { body: { ok: true } }; }
+    return { body: { job: { id: 'j1', type: 'render', payload: { audio: 'x', image: 'y', out: 'z' } } } };
+  });
+  try {
+    const { result } = await runOnce({ url: base });
+    assert.equal(result.ok, false);
+    assert.match(report.error, /remote job type not enabled/);
+  } finally { server.close(); }
+});
+
+test("VideoFactory check is opt-in and ignores remote paths", async () => {
+  const { mkdtemp, mkdir, writeFile, rm } = await import('node:fs/promises');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const root = await mkdtemp(path.join(os.tmpdir(), 'vf-worker-'));
+  try {
+    await mkdir(path.join(root, 'src', 'scripts'), { recursive: true });
+    await writeFile(path.join(root, 'src', 'scripts', 'render_worker.py'), '# test');
+    const seen = [];
+    const { server, base } = await withServer((request) => {
+      seen.push(JSON.parse(request.body));
+      if (request.url.endsWith('/result')) return { body: { ok: true } };
+      return { body: { job: { id: 'j1', type: 'videofactory_check', payload: { path: '/private/do-not-read' } } } };
+    });
+    try {
+      const { result } = await runOnce({ url: base, videoFactoryRoot: root });
+      assert.equal(result.ok, true);
+      assert.equal(result.output.rendererPresent, true);
+      assert.equal(seen[0].capabilities.includes('videofactory_check'), true);
+      assert.equal(seen[0].capabilities.includes('render'), false);
+      const report = seen.at(-1);
+      assert.equal(JSON.stringify(report).includes('/private/do-not-read'), false);
+      assert.equal(JSON.stringify(report).includes(root), false);
+    } finally { server.close(); }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("VideoFactory check cannot be invoked remotely without local opt-in", async () => {
+  const { server, base } = await withServer((request) => request.url.endsWith('/result')
+    ? { body: { ok: true } }
+    : { body: { job: { id: 'j1', type: 'videofactory_check', payload: {} } } });
+  try {
+    const { result } = await runOnce({ url: base, videoFactoryRoot: '' });
+    assert.equal(result.ok, false);
+    assert.match(result.error, /remote job type not enabled/);
+  } finally { server.close(); }
 });

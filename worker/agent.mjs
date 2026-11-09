@@ -79,6 +79,19 @@ const HANDLERS = {
     };
   },
 
+  /** Optional, read-only inventory. The PC owner chooses the folder locally;
+   * no job-supplied path, process execution, credentials or media are read. */
+  async videofactory_check(_payload, options) {
+    const root = options.videoFactoryRoot;
+    if (!root) return { ok: false, error: "VideoFactory check is not enabled on this PC" };
+    try {
+      const { inspectVideoFactory } = await import("./video-factory-check.mjs");
+      return { ok: true, output: await inspectVideoFactory(root) };
+    } catch {
+      return { ok: false, error: "VideoFactory check failed; confirm the local folder and diagnostic module are available" };
+    }
+  },
+
   /** Duration/codec facts for any media file — cheap, and catches bad renders. */
   async probe(payload) {
     if (!payload?.file) return { ok: false, error: "probe needs { file }" };
@@ -167,7 +180,12 @@ const HANDLERS = {
   },
 };
 
-export const CAPABILITIES = Object.keys(HANDLERS);
+// Only these handlers may be invoked by a remote queue. The legacy media
+// handlers lack filesystem confinement and are NOT remotely enabled yet.
+export const CAPABILITIES = ["echo"];
+export function remoteCapabilities(videoFactoryRoot = process.env.TIMBRE_VIDEOFACTORY_ROOT) {
+  return videoFactoryRoot ? [...CAPABILITIES, "videofactory_check"] : [...CAPABILITIES];
+}
 
 /* ------------------------------------------------------------------ */
 /* Job execution                                                       */
@@ -188,7 +206,7 @@ export async function executeJob(job, options = {}) {
   }
 
   try {
-    const result = await handler(job.payload ?? {}, { cwd: options.cwd ?? process.cwd() });
+    const result = await handler(job.payload ?? {}, { cwd: options.cwd ?? process.cwd(), videoFactoryRoot: options.videoFactoryRoot });
     return { ...result, ms: result.ms ?? Date.now() - started };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error), ms: Date.now() - started };
@@ -215,7 +233,7 @@ export async function claimJob(options) {
     headers: authHeaders(options.token),
     body: JSON.stringify({
       worker: options.worker ?? os.hostname(),
-      capabilities: CAPABILITIES,
+      capabilities: remoteCapabilities(options.videoFactoryRoot ?? process.env.TIMBRE_VIDEOFACTORY_ROOT),
       version: VERSION,
     }),
     signal: AbortSignal.timeout(options.timeoutMs ?? 20_000),
@@ -272,7 +290,11 @@ export async function runOnce(options) {
     return { job, result: { ok: true, output: { dryRun: true, type: job.type }, ms: 0 } };
   }
 
-  const result = await executeJob(job, { cwd: options.cwd, handlers: options.handlers });
+  const videoFactoryRoot = options.videoFactoryRoot ?? process.env.TIMBRE_VIDEOFACTORY_ROOT;
+  const allowed = remoteCapabilities(videoFactoryRoot);
+  const result = allowed.includes(job.type)
+    ? await executeJob(job, { cwd: options.cwd, handlers: options.handlers, videoFactoryRoot })
+    : { ok: false, error: `remote job type not enabled: ${String(job.type).slice(0, 100)}`, ms: 0 };
   if (options.report !== false) await reportResult(job, result, options);
   return { job, result };
 }
@@ -320,7 +342,9 @@ const HELP = `Timbre PC worker ${VERSION}
   --self-test         check ffmpeg/ffprobe locally, no network
   --help, --version
 
-Capabilities advertised to n8n: ${CAPABILITIES.join(", ")}
+Remote capability: echo. Optional read-only VideoFactory check requires
+TIMBRE_VIDEOFACTORY_ROOT and video-factory-check.mjs next to agent.mjs.
+Legacy probe/render/concat are disabled for remote jobs pending path confinement.
 `;
 
 async function selfTest() {
