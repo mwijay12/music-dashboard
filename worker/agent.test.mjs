@@ -161,3 +161,26 @@ test("dry-run claims but does not touch the filesystem or report back", async ()
     server.close();
   }
 });
+
+
+test("leased job reports lease ID and requires a positive acknowledgement", async () => {
+  let report;
+  const { server, base } = await withServer((request) => {
+    if (request.url.endsWith("/result")) { report = JSON.parse(request.body); return { body: { accepted: true } }; }
+    return { body: { job: { id: "job-lease", type: "echo", lease_id: "lease-1", payload: {} } } };
+  });
+  try {
+    const result = await runOnce({ url: base });
+    assert.equal(result.result.ok, true);
+    assert.equal(report.leaseId, "lease-1");
+  } finally { server.close(); }
+});
+
+test("leased job rejects a stale or missing acknowledgement", async () => {
+  for (const body of [{ accepted: false }, { received: true }]) {
+    const { server, base } = await withServer((request) => request.url.endsWith("/result")
+      ? { body } : { body: { job: { id: "j", type: "echo", lease_id: "old", payload: {} } } });
+    try { await assert.rejects(runOnce({ url: base }), /lease not accepted/); }
+    finally { server.close(); }
+  }
+});

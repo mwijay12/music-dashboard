@@ -241,6 +241,7 @@ export async function reportResult(job, result, options) {
     headers: authHeaders(options.token),
     body: JSON.stringify({
       jobId: job.id ?? null,
+      ...(job.lease_id != null ? { leaseId: job.lease_id } : {}),
       type: job.type,
       ok: result.ok,
       output: result.output ?? null,
@@ -252,6 +253,14 @@ export async function reportResult(job, result, options) {
     signal: AbortSignal.timeout(options.timeoutMs ?? 20_000),
   });
   if (!response.ok) throw new Error(`report failed: HTTP ${response.status}`);
+  // Older handshake workflows have no acknowledgement field. Queue workflows
+  // must reject stale leases even if a proxy returns an HTTP 200.
+  if (job.lease_id != null) {
+    const text = await response.text();
+    let body;
+    try { body = JSON.parse(text); } catch { throw new Error("report failed: invalid lease acknowledgement"); }
+    if (body?.accepted !== true) throw new Error("report failed: lease not accepted");
+  }
   return true;
 }
 
