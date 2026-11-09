@@ -1,0 +1,157 @@
+diff --git a/src/web/server.py b/src/web/server.py
+index 8bb6734..115b92d 100644
+--- a/src/web/server.py
++++ b/src/web/server.py
+@@ -9,9 +9,9 @@ import subprocess
+ from pathlib import Path
+ from typing import Dict, List, Optional
+ import uvicorn
+-from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Form
++from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Form, Request
+ from fastapi.middleware.cors import CORSMiddleware
+-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
++from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse, JSONResponse
+ from fastapi.staticfiles import StaticFiles
+ 
+ # Set Working Directory and PYTHONPATH to project root
+@@ -34,6 +34,26 @@ from config.settings import (
+ 
+ app = FastAPI(title="VideoFactory API", version="2.0")
+ 
++# This dashboard contains local automation and credentials. It is NOT a public API.
++# Check the actual peer and browser origin; do not trust proxy headers.
++@app.middleware("http")
++async def local_only_guard(request: Request, call_next):
++    from ipaddress import ip_address
++    from urllib.parse import urlsplit
++    try:
++        is_local = bool(request.client) and ip_address(request.client.host).is_loopback
++    except ValueError:
++        is_local = False
++    host = urlsplit("//" + request.headers.get("host", "")).hostname
++    if not is_local or host not in ("127.0.0.1", "localhost", "::1"):
++        return JSONResponse({"error": "Local access only"}, status_code=403)
++    origin = request.headers.get("origin")
++    if origin and origin != f"{request.url.scheme}://{request.headers.get('host', '')}":
++        return JSONResponse({"error": "Cross-origin access denied"}, status_code=403)
++    if request.headers.get("sec-fetch-site") == "cross-site":
++        return JSONResponse({"error": "Cross-site access denied"}, status_code=403)
++    return await call_next(request)
++
+ # CORS Middleware (dashboard is local-only; wildcard + credentials is invalid)
+ app.add_middleware(
+     CORSMiddleware,
+@@ -282,7 +302,10 @@ def get_settings():
+         "WATERMARK_OPACITY": getattr(config.settings, "WATERMARK_OPACITY", 0.45),
+         "WATERMARK_HEIGHT": getattr(config.settings, "WATERMARK_HEIGHT", 65),
+         "WATERMARK_MARGIN": getattr(config.settings, "WATERMARK_MARGIN", 35),
+-        "api_keys": env_data
++        # Never send existing secrets back to the browser. Blank inputs leave
++        # their corresponding existing values untouched when settings are saved.
++        "api_keys": {key: "" for key in env_keys},
++        "api_keys_configured": {key: bool(value) for key, value in env_data.items()}
+     }
+ 
+ @app.post("/api/settings/save")
+@@ -317,7 +340,8 @@ def save_settings(payload: Dict):
+                  "PEXELS_API_KEY", "PIXABAY_API_KEY", "ELEVENLABS_API_KEY",
+                  "YOUTUBE_API_KEY", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN",
+                  "NEWSAPI_KEY", "GUARDIAN_KEY", "GNEWS_KEY", "PUTER_TOKEN"]:
+-            valid_keys[k] = str(v).strip()
++            if isinstance(v, str) and v.strip():
++                valid_keys[k] = v.strip()
+             
+     try:
+         update_settings_on_disk(valid_settings, valid_keys)
+@@ -1256,9 +1280,14 @@ def load_queue_db() -> List[Dict]:
+     if not QUEUE_DB.exists():
+         return []
+     try:
+-        return json.loads(QUEUE_DB.read_text(encoding="utf-8"))
+-    except Exception:
+-        return []
++        data = json.loads(QUEUE_DB.read_text(encoding="utf-8"))
++        if not isinstance(data, list):
++            raise ValueError("queue must be an array")
++        return data
++    except (OSError, ValueError) as exc:
++        # Do not pretend corrupt data means an empty queue: a later write could
++        # silently overwrite the only copy of a user's schedule.
++        raise HTTPException(status_code=500, detail="Upload queue cannot be read. Back up and inspect the file before retrying.") from exc
+         
+ def save_queue_db(data: List[Dict]):
+     QUEUE_DB.parent.mkdir(parents=True, exist_ok=True)
+@@ -1411,7 +1440,9 @@ async def check_upload_queue_loop():
+ 
+ @app.on_event("startup")
+ async def startup_event():
+-    asyncio.create_task(check_upload_queue_loop())
++    # Avoid surprise uploads on launch. Explicit local opt-in only.
++    if os.environ.get("VIDEOFACTORY_ENABLE_AUTO_UPLOAD", "").lower() == "true":
++        asyncio.create_task(check_upload_queue_loop())
+ 
+ # Upload custom video/thumbnail
+ @app.post("/api/queue/upload")
+@@ -1697,21 +1728,6 @@ def check_session(platform: str):
+     threading.Thread(target=launch_session, daemon=True).start()
+     return {"message": f"Browser opened for {platform.upper()}. Verify your session or log in, then close the browser window when done."}
+ 
+-# Temporary Admin Helper for Git Setup
+-@app.get("/api/admin/run_command")
+-def run_command_endpoint(cmd: str):
+-    import subprocess
+-    try:
+-        res = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=str(Path(__file__).parent.parent.parent))
+-        return {
+-            "stdout": res.stdout,
+-            "stderr": res.stderr,
+-            "exit_code": res.returncode
+-        }
+-    except Exception as e:
+-        return {"error": str(e)}
+-
+-
+ # ─── Maintenance Endpoints ────────────────────────────────────────────────────
+ 
+ @app.get("/api/maintenance/disk-usage")
+@@ -1850,7 +1866,7 @@ if __name__ == "__main__":
+         while port < 65535:
+             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                 try:
+-                    s.bind(('0.0.0.0', port))
++                    s.bind(('127.0.0.1', port))
+                     return port
+                 except OSError:
+                     port += 1
+@@ -1868,4 +1884,4 @@ if __name__ == "__main__":
+     print(f"Starting VideoFactory Dashboard Server on:")
+     print(f"  - http://localhost:{port}")
+     print(f"  - http://127.0.0.1:{port}")
+-    uvicorn.run(app, host="0.0.0.0", port=port)
++    uvicorn.run(app, host="127.0.0.1", port=port)
+diff --git a/src/web/js/app.js b/src/web/js/app.js
+index e9f71bd..a763d85 100644
+--- a/src/web/js/app.js
++++ b/src/web/js/app.js
+@@ -3178,7 +3178,7 @@ Return ONLY valid JSON (no markdown, no backticks):
+                 let res = await fetch("/api/settings");
+                 if (res.ok) {
+                     let settingsData = await res.json();
+-                    let backendToken = settingsData.api_keys ? settingsData.api_keys.PUTER_TOKEN : "";
++                    let backendToken = settingsData.api_keys_configured && settingsData.api_keys_configured.PUTER_TOKEN;
+                     if (!backendToken) {
+                         let localToken = null;
+                         if (typeof puter !== 'undefined' && puter.authToken) {
+diff --git a/src/scripts/scheduler.py b/src/scripts/scheduler.py
+index 14d554f..05e6e9d 100644
+--- a/src/scripts/scheduler.py
++++ b/src/scripts/scheduler.py
+@@ -92,6 +92,8 @@ async def run_daily_pipeline(force=False, log_callback=None):
+     log("\n[Scheduler] Step 3: Loading stock media items...")
+     subs_len = len(tts_result["subtitles"]) if tts_result and "subtitles" in tts_result else 10
+     needed_clips = max(35, subs_len * 3)
++    manager = MediaManager(niche=NICHE)
++    manager.scan()
+     media_items = manager.pick_media_for_reel(count=needed_clips, script=script)
+     if not media_items:
+         log("  Error: No stock media items retrieved.")

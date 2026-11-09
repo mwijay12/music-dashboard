@@ -1,0 +1,153 @@
+{
+  "name": "Timbre echo queue \u2014 TEST ONLY",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "timbre-queue-test/jobs",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "1c8f2274-4b43-47fc-9842-531122274fd6",
+      "name": "Claim request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "fda379d2-d2d8-4be0-beff-52b5e86031cc"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nif (!body || typeof body.worker !== 'string' || !body.worker.trim() || body.worker.length > 120) throw new Error('Invalid worker');\nreturn [{json: {worker: body.worker}}];"
+      },
+      "id": "e830763a-e94f-4abc-a5f1-ab9926f49672",
+      "name": "Validate worker",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT (SELECT row_to_json(j) FROM timbre.claim_echo($1::text) AS j) AS job;",
+        "options": {
+          "queryReplacement": "={{ [$json.worker] }}"
+        }
+      },
+      "id": "ae715376-e12e-4740-81bc-4534267eda86",
+      "name": "Claim echo job",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "timbre-queue-test/jobs/result",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "bfd9652c-e393-49f7-94a1-850950d83988",
+      "name": "Result request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        260
+      ],
+      "webhookId": "473f9722-6ca8-45db-bdb1-f0d60e579b3a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body;\nconst uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!body || !uuid.test(body.jobId || '') || !uuid.test(body.leaseId || '') || typeof body.ok !== 'boolean') throw new Error('Invalid result');\nif (body.type !== 'echo') throw new Error('Echo jobs only');\nconst output = JSON.stringify(body.output ?? null);\nif (output.length > 16000 || (body.error != null && (typeof body.error !== 'string' || body.error.length > 2000))) throw new Error('Result too large');\nreturn [{ json: { args: [body.jobId, body.leaseId, body.ok, output, body.error ?? null] } }];"
+      },
+      "id": "79bfe78e-fc2f-4ca8-936c-a3b594872d53",
+      "name": "Validate result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT timbre.complete_echo($1::uuid, $2::uuid, $3::boolean, $4::jsonb, $5::text) AS accepted;",
+        "options": {
+          "queryReplacement": "={{ $json.args }}"
+        }
+      },
+      "id": "e4f20994-8d0f-45f0-8023-cd9ecfabff62",
+      "name": "Complete echo job",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "Claim request": {
+      "main": [
+        [
+          {
+            "node": "Validate worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate worker": {
+      "main": [
+        [
+          {
+            "node": "Claim echo job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Result request": {
+      "main": [
+        [
+          {
+            "node": "Validate result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate result": {
+      "main": [
+        [
+          {
+            "node": "Complete echo job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {},
+  "versionId": "86344ad4-4aac-40b8-b771-beeaa6cfae00"
+}
